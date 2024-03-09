@@ -1,0 +1,6 @@
+# Python related Ignore
+__pycache__/
+
+# Secrets folder
+.scrts/
+.venv/
