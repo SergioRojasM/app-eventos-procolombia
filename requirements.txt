@@ -1,3 +1,8 @@
 langchain_google_genai==0.0.9
 langchain==0.1.11
 pillow==9.4.0
+bs4==0.0.2
+streamlit==1.32.0
+streamlit_chatbox==1.1.11
+pyinstaller==5.13.0
+openpyxl==3.1.2
