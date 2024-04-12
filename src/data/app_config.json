@@ -1,0 +1,41 @@
+{
+    "modelo": "Gemini",
+    "paginas": 1,
+    "criterios": [
+        "World Congress-Colombia",
+        "Eventos-Colombia-Bogota"
+    ],
+    "patrones_busqueda": {
+        "Esp": {
+            "alcance": [
+                "Internacional",
+                "Mundial"
+            ],
+            "tipo_evento": [
+                "Congreso",
+                "Simposio",
+                "Conferencia"
+            ]
+        },
+        "Eng": {
+            "alcance": [
+                "World",
+                "International"
+            ],
+            "tipo_evento": [
+                "Congress",
+                "Conference",
+                "Symposium"
+            ]
+        }
+    },
+    "lugares_busqueda": {
+        "Esp": [
+            "",
+            "Universidad del Bosque"
+        ],
+        "Eng": [
+            ""
+        ]
+    }
+}
