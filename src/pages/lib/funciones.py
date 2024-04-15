@@ -66,9 +66,9 @@ def cargar_configuracion(path_file):
     return configuracion
 
 def cargar_contraseñas(nombre_archivo):
-    with open(nombre_archivo, 'r') as f:
-        contraseñas = toml.load(f)
-    return contraseñas
+    #with open(nombre_archivo, 'r') as f:
+    #    contraseñas = toml.load(f)
+    return st.secrets
 
 def obtener_criterios_busqueda(config):
     list_search_params = []
