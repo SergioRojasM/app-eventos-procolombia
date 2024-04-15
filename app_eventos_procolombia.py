@@ -25,8 +25,8 @@ try:
     coleccion = db['fct_events']
     client.admin.command('ping')
     conn_status = True
-except:
-    print("Error Conectando a MongoDB")
+except Exception as e:
+    st.write(f"Error Conectando a MongoDB: {e}")
 
 if conn_status:
     try:
@@ -34,7 +34,7 @@ if conn_status:
         df = pd.DataFrame(documentos)
         st.dataframe(df)
     except Exception as e:
-        print ( f"Error:{e}")
+        st.write ( f"Error:{e}")
 
 
  
