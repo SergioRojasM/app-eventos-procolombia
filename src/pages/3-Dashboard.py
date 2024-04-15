@@ -2,8 +2,9 @@ import streamlit as st
 import datetime as dt
 import os, toml, requests
 import pandas as pd
-from pages.lib.funciones import cargar_eventos_procesados_archivo, filtrar_df
-
+from pages.lib.funciones import cargar_eventos_procesados_archivo, filtrar_df, cargar_contraseñas
+from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db
+from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db
 from menu import menu
 import plotly.express as px
 
@@ -21,12 +22,13 @@ ACCESS_PATH = PATH_CWD + "/.scrts/access.toml"
 menu()
 st.image(PATH_IMG + "header_rio.jpg")
 # Define el título y la imagen de fondo
-
-df_events_hist = cargar_eventos_procesados_archivo(PATH_DATA + FN_EVENTS)
+contraseñas = cargar_contraseñas(ACCESS_PATH)
+df_events_hist = mdb_cargar_eventos_procesados_db(contraseñas['mongo_db'])
 df_events_hist_filter = df_events_hist[(df_events_hist['status'] == "OK") &
                                         (df_events_hist['there_is_event'] == True) &
                                         (df_events_hist['country'] == "Colombia") &
-                                        ((df_events_hist['year'] >= dt.datetime.today().year-10) | (df_events_hist['year'] == None))]
+                                        ((df_events_hist['year_parsed'] >= dt.datetime.today().year-10) | (df_events_hist['year_parsed'].isna()))]
+
 cols = ['title', 'google_url', 'country', 'city', 'year', 'date', 'description', 'date_processed']
 df_events_hist_filter = df_events_hist_filter[cols]
 cols_name = ['Event title', 'Event URL', 'Event Country', 'Event City', 'Event Year', 'Event Date', 'Event Description', 'Processing Date']

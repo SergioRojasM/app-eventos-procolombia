@@ -26,9 +26,10 @@ import numpy as np
 import google.generativeai as genai
 from menu import menu
 
-from pages.lib.funciones import extraer_informacion_general_gemini, filtrar_df
-
-
+from pages.lib.funciones import extraer_informacion_general_gemini, filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda
+from pages.lib.funciones import limpiar_df_event, web_scrapper
+from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db, sf_check_event_db, sf_insert_rows
+from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db, mdb_check_event_db, mdb_insert_doc
 # Definicion de rutas y constantes
 PATH_CWD = os.getcwd()
 PATH_DATA = PATH_CWD + "/src/data/"
@@ -36,6 +37,7 @@ PATH_IMG  = PATH_DATA + 'img/'
 
 FN_KEYW = 'db_eventos_keyw.xlsx'
 FN_EVENTS = 'events_data.xlsx'
+FN_ERRORS= 'events_error.xlsx'
 FN_EVENTS_TODAY = 'events_data_today.xlsx'
 FN_EVENTS_FILTER = 'events_data_filter.xlsx'
 FN_KEYW_JSON = 'app_config.json'
@@ -58,7 +60,7 @@ static_3 = tab1_col2.empty()
 # Define your desired data structure.
 
 class event(BaseModel):
-    resume: str = Field(description="The resume of the context in few words")
+    # resume: str = Field(description="The resume of the context in few words")
     there_is_event: str = Field(description="Defines if any asociative event is mentioned. If so answer 'Yes', if not answer 'No'")
     title: Optional[str] = Field(description="The name of the event, dont use Acronyms, dont use colon punctuation")
     general_title: Optional[str] = Field(description="The name of the event, dont use Acronyms, don't use colon punctuation, don't specify the version of the event")
@@ -83,119 +85,15 @@ class eventAsist(BaseModel):
     title: str  = Field(description="The name of the event, dont use initials, dont use punctuation marks")
     participants: Optional[str]   = Field(description="The resume of the information in few words about event participation, if not information or you are not sure put None")
 
-@st.cache_resource
-def cargar_contraseñas(nombre_archivo):
-    with open(nombre_archivo, 'r') as f:
-        contraseñas = toml.load(f)
-    return contraseñas
-
 def cargar_llm(GEMINI_API):
 
     os.environ["GOOGLE_API_KEY"] = GEMINI_API
     llm = ChatGoogleGenerativeAI(model="gemini-pro")
     return llm
 
-def cargar_configuracion():
-    
-    if not os.path.exists(PATH_DATA + FN_KEYW_JSON):
-        configuracion = {
-        "modelo": "Gemini",
-        "paginas":1,
-        "criterios": ["World Congress-Colombia", "Eventos-Colombia-Bogota"],
-        "patrones_busqueda":{
-                "Esp":{"alcance": ["Mundial", "Internacional"], "tipo_evento": ["Congreso", "Simposio"]}, 
-                "Ing":{"alcance": ["World", "International"], "tipo_evento": ["Congress", "Simposium"]}
-                  },
-        "lugares_busqueda":{
-                "Esp":["", "Universidad del Bosque"],
-                "Ing":["", "Universidad del Bosque"]
-                }
-        }
-        with open(PATH_DATA + FN_KEYW_JSON, "w") as archivo:
-            json.dump(configuracion, archivo, indent=4)
-
-    else:
-        with open(PATH_DATA + FN_KEYW_JSON, 'r') as archivo:
-            configuracion = json.load(archivo)
-        # lista_criterios = []
-        # for criterio in configuracion['criterios']:
-        #     palabras = []
-        #     palabras = ['"{}"'.format(cadena) for cadena in criterio.split("-")]
-        #     lista_criterios.append(' + '.join(palabras))
-        # configuracion['criterios'] = lista_criterios
-    return configuracion
-
-def obtener_criterios_busqueda(config):
-    list_search_params = []
-    for idioma in config['patrones_busqueda']:
-        for alcance in config['patrones_busqueda'][idioma]['alcance']:
-            for tipo_evento in config['patrones_busqueda'][idioma]['tipo_evento']:
-                if idioma == "Eng":
-                    for lugar in config['lugares_busqueda']['Eng']:
-                        search_params = {
-                                        'q': f'+{tipo_evento}+Colombia+{lugar}',
-                                        'lr': 'lang_esp|lang_eng',
-                                        'exactTerms': f'({alcance}).({tipo_evento})'
-                                        }
-                        # search_params = {
-                        #                 'tipo_evento':tipo_evento,
-                        #                 'alcance':alcance,
-                        #                 'lugar': lugar,
-                        #                 'lang':'lang_eng'
-                        #                 }
-                        list_search_params.append(search_params)
-                if idioma == "Esp":
-                    for lugar in config['lugares_busqueda']['Esp']:
-                        search_params = {
-                                        'q': f'+{tipo_evento}+colombia+{lugar}',
-                                        'lr': 'lang_esp|lang_eng',
-                                        'exactTerms': f'({tipo_evento}).({alcance})'
-                                        }
-                        # search_params = {
-                        #                 'tipo_evento':tipo_evento,
-                        #                 'alcance':alcance,
-                        #                 'lugar': lugar,
-                        #                 'lang':'lang_esp'
-                        #                 }
-                        list_search_params.append(search_params)
-    return list_search_params
-
 def actualizar_configuracion(configuracion):
     with open(PATH_DATA + FN_KEYW_JSON, "w") as archivo:
             json.dump(configuracion, archivo, indent=4)
-
-def cargar_eventos_procesados_archivo():
-    if not os.path.exists(PATH_DATA + FN_EVENTS):
-        # static_1.warning('Archivo con la base de eventos no encontrada, se creara uno en blanco en la ruta "{}".'.format(PATH_DATA), icon="⚠️")
-        cols = ['resume', 'there_is_event', 'title', 'general_title', 'date', 'year', 'description', 'country', 'city','place', 'key_words','asistants', 'status','google_title', 'google_snippet', 'google_long_description', 'google_url', 'search_criteria', 'date_processed','year_parsed']
-        df_events = pd.DataFrame(columns = cols)
-        df_events.to_excel(PATH_DATA + FN_EVENTS, index=False)
-
-    df_events = pd.read_excel(PATH_DATA + FN_EVENTS)
-    cols = {
-    'resume': str,
-    'there_is_event': bool,
-    'title': str,
-    'general_title': str,
-    'date': str,
-    'year': float,
-    'description': str,
-    'country': str,
-    'city': str,
-    'place': str,
-    'key_words': str,
-    'asistants': str,
-    'status': str,
-    'google_title': str,
-    'google_snippet': str,
-    'google_long_description': str,
-    'google_url': str,
-    'search_criteria': str,
-    'date_processed': str,
-    'year_parsed': float
-    }
-    df_events = df_events.astype(cols)
-    return df_events
 
 def query_google_search(page=1, search_engine_keys=None, add_params = {}):
   """
@@ -263,27 +161,6 @@ def query_google_search(page=1, search_engine_keys=None, add_params = {}):
       print(f"An error occurred: {e}")
       return None
 
-# def web_scrapper(url):
-#   """
-
-#   """
-#   # Initializing variable
-#   lang_request = TextRequestsWrapper()
-#   try:
-#     lang_request.get(url)
-#   except:
-#     print('ERR', 'Error scrappiing the url')
-#     return None
-#   # Initializing variable
-#   result = lang_request.get(url)
-#   # Initializing variable
-#   bs_result = BeautifulSoup(result, features="html.parser")
-#   # Calculating result
-#   text = bs_result.get_text()
-#   text = text.replace("\n", " ")
-#   text = text.replace("\t", " ")
-#   return text
-
 def es_archivo_pdf(url):
     try:
         # Realizar una solicitud HEAD para obtener solo los encabezados de la respuesta
@@ -331,151 +208,48 @@ def check_similar (new_key, old_keys):
         else:
             continue
     return False
-
-# def extraer_informacion_general_gemini(url, API_KEY_GEMINI):
-#     os.environ["GOOGLE_API_KEY"] = API_KEY_GEMINI
-#     llm = ChatGoogleGenerativeAI(
-#         model="gemini-pro", 
-#         safety_settings={
-#             HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-#             HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-#             HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-#             HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-#         })
-#     model = genai.GenerativeModel('gemini-pro')
-#     llm_prompt_template = """Your Task is to extract any event showed in following "Context", in the answer the usage of colon punctuation marks or two points punctuation marks is prohibited, use comma instead. 
-#     "context":{context_str}
-#     \n{format_instructions}\n
-#     """
-#     parser = YamlOutputParser(pydantic_object=event)
-#     # parser = JsonOutputParser(pydantic_object=event)
-
-#     # Realizar el query a Gemini
-#     llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-#     llm_prompt = PromptTemplate(
-#         template=llm_prompt_template,
-#         input_variables=["context_str"],
-#         partial_variables={"format_instructions": parser.get_format_instructions()},
-#     )
-    
-#     try:
-#         context = web_scrapper(url)
-#         if context.startswith('Not Acceptable!') or context == None:
-#             loader = WebBaseLoader(url)
-#             docs = loader.load()
-#             doc_prompt = PromptTemplate.from_template("{page_content}")
-#             context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-            
-#         if context != None:
-#             tokens_size = int(model.count_tokens(str(llm_prompt) + context).total_tokens)
-#             if tokens_size > 30000:
-#                 return None
-#             else:
-#                 stuff_chain = llm_prompt | llm | parser
-#                 llm_result = stuff_chain.invoke({"context_str": context, "event_str": event} )
-
-#                 return llm_result
-#     except Exception as e:
-#         print(e)
-#         return None
-
-def limpiar_df_event(df):
-    
-    def cast_year(val):
-        try:
-            val = float(val)
-        except:
-            val = np.nan
-    
-    df = df.replace("None", np.nan)
-    df = df.fillna(np.nan)
-    df = df.replace("", np.nan)
-    df['there_is_event'] = df['there_is_event'].apply(lambda x: x if x in [True, False, "True", "False"] else False)
-    # df['there_is_event'] = df['there_is_event'].replace(to_replace={"True": True, "False": False}, value=False)
-    # df['there_is_event'] = df['there_is_event'].replace(to_replace={True: True, False: False}, value=False)
-    df['year_parsed'] = df['year']
-    # df['year_parsed'] = df['there_is_event'].apply(cast_year)
-    df['year_parsed'] = pd.to_numeric(df['year'], errors='coerce')
-    cols = {
-    'resume': str,
-    'there_is_event': bool,
-    'title': str,
-    'general_title': str,
-    'date': str,
-    'year': str,
-    'description': str,
-    'country': str,
-    'city': str,
-    'place': str,
-    'key_words': str,
-    'asistants': str,
-    'status': str,
-    'google_title': str,
-    'google_snippet': str,
-    'google_long_description': str,
-    'google_url': str,
-    'search_criteria': str,
-    'date_processed': str,
-    'year_parsed':float
-    }
-    df = df.astype(cols)
-    return df
-         
-
+     
 def buscar_eventos(contraseñas = None, pages=2, list_key_w= None):
 
     date =  dt.datetime.today().date().strftime("%Y-%m-%d")
     latest_iteration = tab1_col2.empty()
-    df_events_hist = cargar_eventos_procesados_archivo()
+    df_events_hist = cargar_eventos_procesados_archivo(PATH_DATA + FN_EVENTS)
     df_events_busqueda = pd.DataFrame()
     df_errores_busqueda = pd.DataFrame()
-    step =  int(100 / (10 * (pages) * len(list_key_w) ))
+    step =  1 / (10 * (pages) * len(list_key_w))
     static_3.text(f'Progreso 0 %')
     bar = tab1_col2.progress(0)
     i = 0
     # Buscar Paginas asociadas a los criterios
     for key_W in list_key_w:
-        
-
-
+        print(key_W)
         for page in range(1, pages+1):
             google_query_result = query_google_search( page, contraseñas["api_google_search"], key_W)
             if google_query_result:
                 for item in google_query_result.keys():
+                    df_events_hist = cargar_eventos_procesados_archivo(PATH_DATA + FN_EVENTS)
                     list_hist_links = df_events_hist['google_url'].to_list()
                     list_hist_title = df_events_hist['google_title'].to_list()
                     url = google_query_result[item]['link']
+                    print("###############################################################")
                     print(url)
                     title = google_query_result[item]['title']
                     bar.progress(i+step)
                     i = i+step
+                    print(f"Iteracion: {round(i*100,0)}, step:{step}")
                     if url in list_hist_links or title in list_hist_title:
                         print("Evento Ya Procesado")
                         continue
                     else:
                         static_1.markdown('**Criterio:** {}'.format(key_W['exactTerms']))
                         static_2.markdown('**Link**: {}'.format(url))
-                        static_3.markdown('**Progreso:** {} %'.format(i))
+                        static_3.markdown('**Progreso:** {} %'.format(round(i*100,0)))
                         try:
+                            
                             llm_result = extraer_informacion_general_gemini(url, contraseñas["api_gemini"]['KEY'])
                             # if llm_result['there_is_event'] =="Yes":
                             #     extraer_informacion_eventos_rel_gemini(url, contraseñas["api_gemini"]['KEY']):
-                        except Exception as e:
-                            llm_result = None
-                            
-                            print(e)
-                        finally:
-                            if llm_result == None:
-                                df_evento_error = pd.DataFrame()
-                                df_evento_error ['status']  = 'ERROR'
-                                df_evento_error ['eror'] = e
-                                df_evento_error['date_processed'] =  date
-                                df_evento_error['google_url'] = google_query_result[item]['link']
-                                df_errores_busqueda = pd.concat([df_errores_busqueda, df_evento_error])
-                                df_errores_busqueda.to_excel(PATH_DATA + "errors_today.xlsx", index=False)
-                                continue
-                            else:
+                            if llm_result != None:
                                 df_event_info = pd.DataFrame([llm_result.__dict__])
                                 df_event_info ['status']  = 'OK'   
                                 # df_event_info = json_to_df(llm_result)
@@ -486,17 +260,123 @@ def buscar_eventos(contraseñas = None, pages=2, list_key_w= None):
                                 df_event_info['search_criteria'] =  str(key_W)
                                 df_event_info['date_processed'] =  date
                                 df_event_info = limpiar_df_event(df_event_info)
-                                df_events_busqueda = pd.concat([df_events_busqueda, df_event_info])
-                                df_events_busqueda.to_excel(PATH_DATA + "events_data_today.xlsx", index=False)
+                                # Filtrar y guardar eventos sin errores
+                                df_event_info = df_event_info[df_event_info['status'] == "OK"]
                                 df_events_hist = pd.concat([df_events_hist, df_event_info])
                                 df_events_hist.to_excel(PATH_DATA + FN_EVENTS, index=False)
-                        
-    df_events_hist = pd.read_excel(PATH_DATA + FN_EVENTS)
-    df_events_hist_filter = df_events_hist[(df_events_hist['status'] == "OK") &
-                                (df_events_hist['there_is_event'] == True) &
-                                (df_events_hist['country'] == "Colombia") &
-                                ((df_events_hist['year'] >= dt.datetime.today().year-10) | (df_events_hist['year'] == None))]
-    df_events_hist_filter.to_excel(PATH_DATA + FN_EVENTS_FILTER, index=False)
+                                df_events_busqueda = pd.concat([df_events_busqueda, df_event_info])
+                            else:
+                                continue
+                            
+                            
+                        except Exception as e:
+                            print(f"Error:{e}" )
+                            df_evento_error = pd.DataFrame()
+                            df_evento_error ['status']  = 'ERROR'
+                            df_evento_error ['error'] = e
+                            df_evento_error['date_processed'] =  date
+                            df_evento_error['google_url'] = google_query_result[item]['link']
+                            df_errores_busqueda = pd.concat([df_errores_busqueda, df_evento_error])
+                            df_errores_busqueda.to_excel(PATH_DATA + "errors_today.xlsx", index=False)
+                            print(df_evento_error)
+                            print(df_errores_busqueda)
+                            continue
+
+def buscar_eventos_v2(contraseñas = None, pages=2, list_key_w= None):
+    sel_db_mongo = True 
+    sel_db_snowflake = False
+    date =  dt.datetime.today().date().strftime("%Y-%m-%d")
+    latest_iteration = tab1_col2.empty()
+    # if 
+    # df_events_hist = sf_cargar_eventos_procesados_db(contraseñas['snowflake'])
+    df_events_busqueda = pd.DataFrame()
+    df_errores_busqueda = pd.DataFrame()
+    step =  1 / (10 * (pages) * len(list_key_w))
+    static_3.text(f'Progreso 0 %')
+    bar = tab1_col2.progress(0)
+    i = 0
+    # Buscar Paginas asociadas a los criterios
+    for key_W in list_key_w:
+        print(key_W)
+        for page in range(1, pages+1):
+            google_query_result = query_google_search( page, contraseñas["api_google_search"], key_W)
+            if google_query_result:
+                for item in google_query_result.keys():
+                    url = google_query_result[item]['link']
+                    title = google_query_result[item]['title']
+                    print("###############################################################")
+                    print(url)
+                    
+                    bar.progress(i+step)
+                    i = i+step
+                    
+                    if (sel_db_snowflake and sf_check_event_db(url, title, contraseñas['snowflake'])) or \
+                        (sel_db_mongo and mdb_check_event_db(url, title, contraseñas['mongo_db'])):
+                            
+                        print("Evento Ya Procesado")
+                        continue
+                    else:
+                        static_1.markdown('**Criterio:** {}'.format(key_W['exactTerms']))
+                        static_2.markdown('**Link**: {}'.format(url))
+                        static_3.markdown('**Progreso:** {} %'.format(round(i*100,0)))
+                        try:                      
+                            llm_result = extraer_informacion_general_gemini(url, contraseñas["api_gemini"]['KEY'])
+
+                            if llm_result != None:
+                                df_event_info = pd.DataFrame([llm_result.__dict__])
+                                df_event_info ['status']  = 'OK'   
+                                # df_event_info = json_to_df(llm_result)
+                                df_event_info['google_title'] = google_query_result[item]['title']
+                                df_event_info['google_snippet'] = google_query_result[item]['snippet']
+                                df_event_info['google_long_description'] = google_query_result[item]['long_description']
+                                df_event_info['google_url'] = google_query_result[item]['link']
+                                df_event_info['search_criteria'] =  str(key_W)
+                                df_event_info['date_processed'] =  date
+                                df_event_info = limpiar_df_event(df_event_info)
+                                # Filtrar y guardar eventos sin errores
+                                df_event_info = df_event_info[df_event_info['status'] == "OK"]
+                                # df_events_hist = pd.concat([df_events_hist, df_event_info])
+                                # df_events_hist.to_excel(PATH_DATA + FN_EVENTS, index=False)
+                                df_events_busqueda = pd.concat([df_events_busqueda, df_event_info])
+                                if sel_db_snowflake:
+                                    resultado = sf_insert_rows(df_event_info, 'fct_eventos', contraseñas['snowflake'])
+                                elif sel_db_mongo:
+                                    df_event_info['date_processed'] = pd.to_datetime(df_event_info['date_processed'])
+                                    resultado = mdb_insert_doc(df_event_info, 'fct_eventos', contraseñas['mongo_db'])
+                                if resultado == True:
+                                    print("Evento Insertados Correctamente")
+                                else:
+                                    print("Error Insertando Evento. Error: {}".format(resultado))
+                            else:
+                                print(llm_result)
+                        except Exception as e:
+                            dict_error = {
+                                'status': 'ERROR',
+                                'error': str(e),
+                                'date_processed' : date,
+                                'google_url': url
+                            }
+                            print(f"Error:{e}" )
+                            df_evento_error = pd.DataFrame([dict_error])
+                            df_errores_busqueda = pd.concat([df_errores_busqueda, df_evento_error])
+                            #df_errores_busqueda.to_excel(PATH_DATA + "errors_today.xlsx", index=False)
+                            if sel_db_snowflake:
+                                resultado = sf_insert_rows(df_evento_error, 'fct_errores', contraseñas['snowflake'])
+                            elif sel_db_mongo:
+                                df_evento_error['date_processed'] = pd.to_datetime(df_evento_error['date_processed'])
+                                resultado = mdb_insert_doc(df_evento_error, 'fct_errores', contraseñas['mongo_db'])
+                                
+                            if resultado == True:
+                                print("Errores Insertados Correctamente")
+                            else:
+                                print("Error Insertando Evento. Error: {}".format(resultado))
+
+
+    return df_events_busqueda
+
+
+
+
     return df_events_busqueda
 
 def extraer_informacion_eventos_rel_gemini(url, event, API_KEY_GEMINI):
@@ -601,7 +481,7 @@ def buscar_eventos_relacionados(llm_result_event, contraseñas):
                     continue
                 else:
                     #print(google_query_result[url]['link'], search_pattern)
-                    ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.resume + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
+                    ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.description + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
                     ref_event_key = llm_result_event.title + " | " + llm_result_event.country + " | " + llm_result_event.year 
                     try:   
                         yaml_events_related = extraer_informacion_eventos_rel_gemini(google_query_result[url]['link'], ref_event_info , contraseñas["api_gemini"]['KEY'])
@@ -695,7 +575,7 @@ def buscar_informacion_asistentes(llm_result_event, contraseñas):
                 continue
             else:
                 # print(google_query_result[url]['link'], search_pattern)
-                ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.resume + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
+                ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.description + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
                 try:   
                     yaml_envent_asistants = extraer_informacion_asistentes_gemini(google_query_result[url]['link'], ref_event_info , contraseñas["api_gemini"]['KEY'])
                     if yaml_envent_asistants.participants not in [None, 'None', '', ' '] and not check_similar(yaml_envent_asistants.participants, asistants_list):
@@ -724,20 +604,14 @@ def json_to_df(json_dict):
 def main():
     
 
-    config = cargar_configuracion()
+    config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
     contraseñas = cargar_contraseñas(ACCESS_PATH)
     criterios = obtener_criterios_busqueda(config)
     with tab1:
         
-            # with st.expander("Ver Criterios de Busqueda"):
-            #     with st.container():
-            #         st.write("***Critrios:***")
-                    
-            #         for i, key in enumerate([criterios]):
-            #             st.write(f"{i+1} - {str(key)}")
             
         with st.expander("Ver Criterios de Busqueda", expanded =False):
-            config = cargar_configuracion()
+
             st.markdown("**Criterios Español** ")
             with st.container(border=True):
                 tab3_criterios_esp_col1, tab3_criterios_esp_col2, tab3_criterios_esp_col3 = st.columns([3, 3, 3])
@@ -766,19 +640,12 @@ def main():
                 for criterio in config['lugares_busqueda']['Eng']:
                     tab3_criterios_esp_col3.write(criterio)            
                
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
+                                   
                         
         iniciar_busqueda = tab1_col1.button("Iniciar Busqueda Automatica")
         if iniciar_busqueda:
             static_0.write(f"⏳ Buscando Informacion de eventos!!") 
-            df_events = buscar_eventos(contraseñas, pages=config['paginas'], list_key_w= criterios)
+            df_events = buscar_eventos_v2(contraseñas, pages=config['paginas'], list_key_w= criterios)
             static_0.write(f"✔️ Hemos finalizado la busqueda de eventos ")   
             with st.expander("Ver Resultados Encontrados:"):
                 with st.container():
@@ -792,11 +659,13 @@ def main():
             
     with tab2:
 
-        df_events_hist = cargar_eventos_procesados_archivo()
+        df_events_hist = mdb_cargar_eventos_procesados_db(contraseñas['mongo_db'])
+        df_events_hist['date_processed'] = pd.to_datetime(df_events_hist['date_processed'])
+        df_events_hist['there_is_event'] = df_events_hist['date_processed'].astype(bool)
         df_events_hist_filter = df_events_hist[(df_events_hist['status'] == "OK") &
                                                 (df_events_hist['there_is_event'] == True) &
                                                 (df_events_hist['country'] == "Colombia") &
-                                                ((df_events_hist['year'] >= dt.datetime.today().year-10) | (df_events_hist['year'] == None))]
+                                                ((df_events_hist['year_parsed'] >= dt.datetime.today().year-10) | (df_events_hist['year_parsed'] == None))]
         cols = ['title', 'google_url', 'country', 'city', 'year', 'date', 'description', 'date_processed']
         df_events_hist_filter = df_events_hist_filter[cols]
         cols_name = ['Event title', 'Event URL', 'Event Country', 'Event City', 'Event Year', 'Event Date', 'Event Description', 'Processing Date']
@@ -828,7 +697,7 @@ def main():
         
         st.markdown("***Criterios de Busqueda*** ")
         with st.expander("Ver Criterios de Busqueda", expanded =False):
-            config = cargar_configuracion()
+            config = cargar_configuracion(PATH_DATA + FN_KEYW_JSON)
             st.markdown("**Criterios Español** ")
             with st.container(border=True):
                 tab3_criterios_esp_col1, tab3_criterios_esp_col2, tab3_criterios_esp_col3 = st.columns([3, 3, 3])
@@ -941,7 +810,7 @@ def main():
             list_rmv_alcance = []
             list_rmv_tipo = []
             list_rmv_lugar = []
-            config = cargar_configuracion()
+            config = cargar_configuracion(PATH_DATA + FN_KEYW_JSON)
             # if idioma_radio_rmv == "Esp":
             with st.container(border=True):
                 col2_1, col2_2, col2_3 = col2.columns([3, 3, 3])

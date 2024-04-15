@@ -4,3 +4,5 @@ __pycache__/
 # Secrets folder
 .scrts/
 .venv/
+
+.streamlit/secrets.toml
