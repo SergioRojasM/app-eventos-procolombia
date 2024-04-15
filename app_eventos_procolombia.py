@@ -16,7 +16,7 @@ st.image(PATH_IMG + "header_ctg.jpg")
 menu()
 
 mdb_config = st.secrets['mongo_db']
-
+st.write(mdb_config)
 uri = f"mongodb+srv://{mdb_config['user']}:{mdb_config['password']}@{mdb_config['cluster']}.hscob2f.mongodb.net/?retryWrites=true&w=majority&appName={mdb_config['cluster']}"
 conn_status = False
 try:
