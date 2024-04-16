@@ -26,7 +26,7 @@ from menu import menu
 # llm = ChatGoogleGenerativeAI(model="gemini-pro")
 
 # Definicion de rutas y constantes
-PATH_CWD = "c:/wom/1_VIU/TFM/app-eventos-procolombia/"
+PATH_CWD = os.getcwd()
 PATH_DATA = PATH_CWD + "/src/data/"
 PATH_IMG  = PATH_DATA + 'img/'
 FN_KEYW = 'db_eventos_keyw.csv'

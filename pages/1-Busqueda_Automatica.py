@@ -44,7 +44,10 @@ FN_KEYW_JSON = 'app_config.json'
 ACCESS_PATH = PATH_CWD + "/.scrts/access.toml"
 #
 MODELS_DICT = {'Gemini':0, 'GROG-LLAMA2':1}
-
+DB_DICT = {'MongoDB':0, 'Snowflake':1}
+PERIODO_DICT = {"Sin Restriccion" : 0, "Ultimo año":1, "Ultimo 1 mes":2, "Ultima Semana":3}
+ORDEN_DICT = {"Sin orden":0, "Mas Recientes":1, "Ambos":2}
+                        
 pd.set_option('future.no_silent_downcasting', True)
 # Configuracion de la pagina
 st.set_page_config(page_title="Busqueda Automatica", page_icon=":rocket:",layout="wide")
@@ -335,8 +338,6 @@ def buscar_eventos_v2(contraseñas = None, pages=2, list_key_w= None):
                                 df_event_info = limpiar_df_event(df_event_info)
                                 # Filtrar y guardar eventos sin errores
                                 df_event_info = df_event_info[df_event_info['status'] == "OK"]
-                                # df_events_hist = pd.concat([df_events_hist, df_event_info])
-                                # df_events_hist.to_excel(PATH_DATA + FN_EVENTS, index=False)
                                 df_events_busqueda = pd.concat([df_events_busqueda, df_event_info])
                                 if sel_db_snowflake:
                                     resultado = sf_insert_rows(df_event_info, 'fct_eventos', contraseñas['snowflake'])
@@ -374,10 +375,6 @@ def buscar_eventos_v2(contraseñas = None, pages=2, list_key_w= None):
 
     return df_events_busqueda
 
-
-
-
-    return df_events_busqueda
 
 def extraer_informacion_eventos_rel_gemini(url, event, API_KEY_GEMINI):
     
@@ -650,12 +647,7 @@ def main():
             with st.expander("Ver Resultados Encontrados:"):
                 with st.container():
                     st.write("***Eventos encontrados:***")
-                    df_events_hist = pd.read_excel(PATH_DATA + FN_EVENTS_TODAY)
-                    df_events_hist_filter = df_events_hist[(df_events_hist['status'] == "OK") &
-                                                        (df_events_hist['there_is_event'] == True) &
-                                                        (df_events_hist['country'] == "Colombia") &
-                                                        ((df_events_hist['year'] >= dt.datetime.today().year-10) | (df_events_hist['year'] == None))]
-                    st.dataframe(df_events_hist_filter, use_container_width=True, hide_index  = True)
+                    st.dataframe(df_events, use_container_width=True, hide_index  = True)
             
     with tab2:
 
@@ -676,24 +668,51 @@ def main():
         
     with tab3:
         st.header("Configuracion por defecto")
-
-        st.markdown("***Modelo LLM*** ")
-        config['modelo'] = st.radio(
+        col1_conf, col2_conf = st.columns([4,4])
+        col1_conf.markdown("***Modelo LLM*** ")
+        radio_modelo = col1_conf.radio(
                                 "Seleccione un modelo 👉",
                                 key="model",
                                 options=["Gemini", "GROG-LLAMA2"],
                                 index= MODELS_DICT[config['modelo']],
                                 horizontal = True
                             )
-        
-        st.markdown("***Numero de Paginas a buscar en google por Criterio*** ")
-        config['paginas'] = st.radio(
+        col1_conf.markdown("***Numero de Paginas a buscar en google por Criterio*** ")
+        config['paginas'] = col1_conf.radio(
                         "Seleccione numero de paginas 👉",
                         key="pages",
                         options=[1, 2, 3, 4, 5],
                         index= config['paginas']-1,
                         horizontal = True
                     )
+        col1_conf.markdown("***Base de datos*** ")
+        config['base_datos'] = col1_conf.radio(
+                        "Seleccionar Base de datos 👉",
+                        key="db",
+                        options=["MongoDB", "Snowflake"],
+                        index= DB_DICT[config['base_datos']],
+                        horizontal = True
+                    )
+        
+        col2_conf.markdown("***Temporalidad Busqueda*** ")
+        config['periodo'] = col2_conf.radio(
+                        "Seleccionar Base de datos 👉",
+                        key="orden",
+                        options=["Sin Restriccion", "Ultimo año", "Ultimo 1 mes", "Ultima Semana"],
+                        index= PERIODO_DICT[config['periodo']],
+                        horizontal = True
+                    )
+        config['orden'] = col2_conf.radio(
+                        "Seleccionar orden de busqueda 👉",
+                        key="periodo",
+                        options=["Sin orden", "Mas Recientes", "Ambos"],
+                        index= ORDEN_DICT[config['orden']],
+                        horizontal = True
+                    )
+        
+        bot_act_conf =  col2_conf.button("Actualizar Configuracion")
+        if bot_act_conf:    
+            actualizar_configuracion(config)
         
         st.markdown("***Criterios de Busqueda*** ")
         with st.expander("Ver Criterios de Busqueda", expanded =False):
@@ -739,7 +758,7 @@ def main():
             to_add_lugar = col2.text_input("Ingrese un nuevo lugar de eventos:", key="add_key_lugar")
             
             idioma_radio_add = col3.radio("Seleccione el idioma 👉", ['Esp', 'Eng'], horizontal =False,  key="radio_idioma_add")
-            if col3.button("Configuracion configuracion", key="add_key"):
+            if col3.button("Actualizar configuracion", key="add_key"):
                 config_modificada = False
                 if idioma_radio_add == 'Esp':
                     if to_add_alcance:

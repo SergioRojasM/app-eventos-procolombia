@@ -1,6 +1,9 @@
 {
-    "modelo": "Gemini",
+    "modelo": "GROG-LLAMA2",
     "paginas": 1,
+    "base_datos": "MongoDB",
+    "periodo": "Sin Restriccion",
+    "orden": "Sin orden",
     "criterios": [
         "World Congress-Colombia",
         "Eventos-Colombia-Bogota"
