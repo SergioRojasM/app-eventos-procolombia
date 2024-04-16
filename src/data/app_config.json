@@ -2,7 +2,7 @@
     "modelo": "GROG-LLAMA2",
     "paginas": 1,
     "base_datos": "MongoDB",
-    "periodo": "Sin Restriccion",
+    "periodo": "Ultima semana",
     "orden": "Sin orden",
     "criterios": [
         "World Congress-Colombia",

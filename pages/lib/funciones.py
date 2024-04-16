@@ -71,37 +71,72 @@ def cargar_contraseñas(nombre_archivo):
     return st.secrets
 
 def obtener_criterios_busqueda(config):
+    
     list_search_params = []
+    periodo = 'y[10]'
+    
+    if config['periodo'] == 'Ultimo año':
+        periodo = 'y[1]'
+    elif config['periodo'] == 'Ultimo mes':
+        periodo = 'm[1]'
+    elif config['periodo'] == 'Ultima semana':
+        periodo = 'w[1]'
+    else :
+        periodo = 'y[10]'
+        
+    if config['orden'] == 'Mas Recientes':
+        orden_list = ['date']
+    elif config['orden'] == 'Los dos metodos':
+        orden_list = ['', 'date']
+    else :
+        orden_list = ['']
+
+        
+    
     for idioma in config['patrones_busqueda']:
         for alcance in config['patrones_busqueda'][idioma]['alcance']:
             for tipo_evento in config['patrones_busqueda'][idioma]['tipo_evento']:
                 if idioma == "Eng":
                     for lugar in config['lugares_busqueda']['Eng']:
-                        search_params = {
-                                        'q': f'+{tipo_evento}+Colombia+{lugar}',
-                                        'lr': 'lang_esp|lang_eng',
-                                        'exactTerms': f'({alcance}).({tipo_evento})'
-                                        }
-                        # search_params = {
-                        #                 'tipo_evento':tipo_evento,
-                        #                 'alcance':alcance,
-                        #                 'lugar': lugar,
-                        #                 'lang':'lang_eng'
-                        #                 }
-                        list_search_params.append(search_params)
+                        for orden in orden_list:
+                            if orden == "":
+                                search_params = {
+                                                'q': f'+{tipo_evento}+Colombia+{lugar}',
+                                                'lr': 'lang_esp|lang_eng',
+                                                'exactTerms': f'({alcance}).({tipo_evento})',
+                                                'dateRestrict': periodo
+                                                }
+                                list_search_params.append(search_params)
+                            elif orden == 'date':
+                                search_params = {
+                                                'q': f'+{tipo_evento}+Colombia+{lugar}',
+                                                'lr': 'lang_esp|lang_eng',
+                                                'exactTerms': f'({alcance}).({tipo_evento})',
+                                                'dateRestrict': periodo,
+                                                'sort': orden
+                                                }
+                                list_search_params.append(search_params)
                 if idioma == "Esp":
                     for lugar in config['lugares_busqueda']['Esp']:
-                        search_params = {
-                                        'q': f'+{tipo_evento}+colombia+{lugar}',
-                                        'lr': 'lang_esp|lang_eng',
-                                        'exactTerms': f'({tipo_evento}).({alcance})'
-                                        }
-                        # search_params = {
-                        #                 'tipo_evento':tipo_evento,
-                        #                 'alcance':alcance,
-                        #                 'lugar': lugar,
-                        #                 'lang':'lang_esp'
-                        #                 }
+                        for orden in orden_list:
+                            if orden == "":
+                                search_params = {
+                                                'q': f'+{tipo_evento}+Colombia+{lugar}',
+                                                'lr': 'lang_esp|lang_eng',
+                                                'exactTerms': f'({alcance}).({tipo_evento})',
+                                                'dateRestrict': periodo
+                                                }
+                                list_search_params.append(search_params)
+                            elif orden == 'date':
+                                search_params = {
+                                                'q': f'+{tipo_evento}+Colombia+{lugar}',
+                                                'lr': 'lang_esp|lang_eng',
+                                                'exactTerms': f'({alcance}).({tipo_evento})',
+                                                'dateRestrict': periodo,
+                                                'sort': orden
+                                                }
+                                list_search_params.append(search_params)
+
                         list_search_params.append(search_params)
     return list_search_params
 

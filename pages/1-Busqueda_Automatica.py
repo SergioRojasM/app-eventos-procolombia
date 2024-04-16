@@ -45,8 +45,8 @@ ACCESS_PATH = PATH_CWD + "/.scrts/access.toml"
 #
 MODELS_DICT = {'Gemini':0, 'GROG-LLAMA2':1}
 DB_DICT = {'MongoDB':0, 'Snowflake':1}
-PERIODO_DICT = {"Sin Restriccion" : 0, "Ultimo año":1, "Ultimo 1 mes":2, "Ultima Semana":3}
-ORDEN_DICT = {"Sin orden":0, "Mas Recientes":1, "Ambos":2}
+PERIODO_DICT = {"Sin restriccion" : 0, "Ultimo año":1, "Ultimo mes":2, "Ultima semana":3}
+ORDEN_DICT = {"Sin orden":0, "Mas Recientes":1, "Los dos metodos":2}
                         
 pd.set_option('future.no_silent_downcasting', True)
 # Configuracion de la pagina
@@ -118,7 +118,7 @@ def query_google_search(page=1, search_engine_keys=None, add_params = {}):
   params = {
     'key' : search_engine_keys['KEY'],
     'cx' : search_engine_keys['ID'],
-    'dateRestrict':'y[10]',
+    # 'dateRestrict':'y[10]',
     'fileType': '-pdf',
   }
   params.update(add_params)
@@ -698,14 +698,14 @@ def main():
         config['periodo'] = col2_conf.radio(
                         "Seleccionar Base de datos 👉",
                         key="orden",
-                        options=["Sin Restriccion", "Ultimo año", "Ultimo 1 mes", "Ultima Semana"],
+                        options=["Sin restriccion", "Ultimo año", "Ultimo mes", "Ultima semana"],
                         index= PERIODO_DICT[config['periodo']],
                         horizontal = True
                     )
         config['orden'] = col2_conf.radio(
                         "Seleccionar orden de busqueda 👉",
                         key="periodo",
-                        options=["Sin orden", "Mas Recientes", "Ambos"],
+                        options=["Sin orden", "Mas Recientes", "Los dos metodos"],
                         index= ORDEN_DICT[config['orden']],
                         horizontal = True
                     )
