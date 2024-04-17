@@ -697,14 +697,14 @@ def main():
         col2_conf.markdown("***Temporalidad Busqueda*** ")
         config['periodo'] = col2_conf.radio(
                         "Seleccionar Base de datos 👉",
-                        key="orden",
+                        key="periodo",
                         options=["Sin restriccion", "Ultimo año", "Ultimo mes", "Ultima semana"],
                         index= PERIODO_DICT[config['periodo']],
                         horizontal = True
                     )
         config['orden'] = col2_conf.radio(
                         "Seleccionar orden de busqueda 👉",
-                        key="periodo",
+                        key="orden",
                         options=["Sin orden", "Mas Recientes", "Los dos metodos"],
                         index= ORDEN_DICT[config['orden']],
                         horizontal = True
