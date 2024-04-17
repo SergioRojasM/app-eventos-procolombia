@@ -26,8 +26,8 @@ import numpy as np
 import google.generativeai as genai
 from menu import menu
 
-from pages.lib.funciones import extraer_informacion_general_gemini, filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda
-from pages.lib.funciones import limpiar_df_event, web_scrapper
+from pages.lib.funciones import filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda, actualizar_configuracion
+from pages.lib.funciones import limpiar_df_event, web_scrapper, extraer_informacion_general_gemini
 from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db, sf_check_event_db, sf_insert_rows
 from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db, mdb_check_event_db, mdb_insert_doc
 # Definicion de rutas y constantes
@@ -43,10 +43,7 @@ FN_EVENTS_FILTER = 'events_data_filter.xlsx'
 FN_KEYW_JSON = 'app_config.json'
 ACCESS_PATH = PATH_CWD + "/.scrts/access.toml"
 #
-MODELS_DICT = {'Gemini':0, 'GROG-LLAMA2':1}
-DB_DICT = {'MongoDB':0, 'Snowflake':1}
-PERIODO_DICT = {"Sin restriccion" : 0, "Ultimo año":1, "Ultimo mes":2, "Ultima semana":3}
-ORDEN_DICT = {"Sin orden":0, "Mas Recientes":1, "Los dos metodos":2}
+
                         
 pd.set_option('future.no_silent_downcasting', True)
 # Configuracion de la pagina
@@ -54,7 +51,7 @@ st.set_page_config(page_title="Busqueda Automatica", page_icon=":rocket:",layout
 st.image(PATH_IMG + "header_verde.jpg")
 st.subheader("Busqueda de Eventos de Turismo")
 menu()
-tab1, tab2, tab3 = st.tabs(["Busqueda Automatica", "Resultados", "Configuración"])
+tab1, tab2= st.tabs(["Busqueda Automatica", "Resultados"])
 tab1_col1, tab1_col2 = tab1.columns([2, 5])
 static_0 = tab1_col2.empty()
 static_1 = tab1_col2.empty()
@@ -93,10 +90,6 @@ def cargar_llm(GEMINI_API):
     os.environ["GOOGLE_API_KEY"] = GEMINI_API
     llm = ChatGoogleGenerativeAI(model="gemini-pro")
     return llm
-
-def actualizar_configuracion(configuracion):
-    with open(PATH_DATA + FN_KEYW_JSON, "w") as archivo:
-            json.dump(configuracion, archivo, indent=4)
 
 def query_google_search(page=1, search_engine_keys=None, add_params = {}):
   """
@@ -664,255 +657,6 @@ def main():
         df_events_hist_filter.columns = cols_name
         column_config={"Event URL": st.column_config.LinkColumn("Event URL")}
         st.dataframe(filtrar_df(df_events_hist_filter), use_container_width=True, hide_index  = True, column_config= column_config)
-        
-        
-    with tab3:
-        st.header("Configuracion por defecto")
-        col1_conf, col2_conf = st.columns([4,4])
-        col1_conf.markdown("***Modelo LLM*** ")
-        radio_modelo = col1_conf.radio(
-                                "Seleccione un modelo 👉",
-                                key="model",
-                                options=["Gemini", "GROG-LLAMA2"],
-                                index= MODELS_DICT[config['modelo']],
-                                horizontal = True
-                            )
-        col1_conf.markdown("***Numero de Paginas a buscar en google por Criterio*** ")
-        config['paginas'] = col1_conf.radio(
-                        "Seleccione numero de paginas 👉",
-                        key="pages",
-                        options=[1, 2, 3, 4, 5],
-                        index= config['paginas']-1,
-                        horizontal = True
-                    )
-        col1_conf.markdown("***Base de datos*** ")
-        config['base_datos'] = col1_conf.radio(
-                        "Seleccionar Base de datos 👉",
-                        key="db",
-                        options=["MongoDB", "Snowflake"],
-                        index= DB_DICT[config['base_datos']],
-                        horizontal = True
-                    )
-        
-        col2_conf.markdown("***Temporalidad Busqueda*** ")
-        config['periodo'] = col2_conf.radio(
-                        "Seleccionar Base de datos 👉",
-                        key="periodo",
-                        options=["Sin restriccion", "Ultimo año", "Ultimo mes", "Ultima semana"],
-                        index= PERIODO_DICT[config['periodo']],
-                        horizontal = True
-                    )
-        config['orden'] = col2_conf.radio(
-                        "Seleccionar orden de busqueda 👉",
-                        key="orden",
-                        options=["Sin orden", "Mas Recientes", "Los dos metodos"],
-                        index= ORDEN_DICT[config['orden']],
-                        horizontal = True
-                    )
-        
-        bot_act_conf =  col2_conf.button("Actualizar Configuracion")
-        if bot_act_conf:    
-            actualizar_configuracion(config)
-        
-        st.markdown("***Criterios de Busqueda*** ")
-        with st.expander("Ver Criterios de Busqueda", expanded =False):
-            config = cargar_configuracion(PATH_DATA + FN_KEYW_JSON)
-            st.markdown("**Criterios Español** ")
-            with st.container(border=True):
-                tab3_criterios_esp_col1, tab3_criterios_esp_col2, tab3_criterios_esp_col3 = st.columns([3, 3, 3])
-
-                tab3_criterios_esp_col1.markdown("***Alcance*** ")
-                for criterio in config['patrones_busqueda']['Esp']['alcance']:
-                    tab3_criterios_esp_col1.write(criterio)
-                tab3_criterios_esp_col2.markdown("***Tipo evento*** ")
-                for criterio in config['patrones_busqueda']['Esp']['tipo_evento']:
-                    tab3_criterios_esp_col2.write(criterio)
-                tab3_criterios_esp_col3.markdown("***Lugares*** ")
-                for criterio in config['lugares_busqueda']['Esp']:
-                    tab3_criterios_esp_col3.write(criterio)
-            
-            st.markdown("**Criterios Ingles** ")
-            with st.container(border=True):
-                tab3_criterios_esp_col1, tab3_criterios_esp_col2, tab3_criterios_esp_col3 = st.columns([3, 3, 3])
-
-                tab3_criterios_esp_col1.markdown("***Alcance*** ")
-                for criterio in config['patrones_busqueda']['Eng']['alcance']:
-                    tab3_criterios_esp_col1.write(criterio)
-                tab3_criterios_esp_col2.markdown("***Tipo evento*** ")
-                for criterio in config['patrones_busqueda']['Eng']['tipo_evento']:
-                    tab3_criterios_esp_col2.write(criterio)
-                tab3_criterios_esp_col3.markdown("***Lugares*** ")
-                for criterio in config['lugares_busqueda']['Eng']:
-                    tab3_criterios_esp_col3.write(criterio)
-                
-        st.markdown("***Agregar Criterios de Busqueda*** ")
-        info_1= st.empty()
-        info_2= st.empty()
-        info_3= st.empty()
-        col1, col2, col3= st.columns([2, 4,4])
-        add_cri_chk_b = col1.checkbox('Agregar', key="add_cri")
-        if add_cri_chk_b:
-
-            to_add_alcance = col2.text_input("Ingrese un nuevo alcance de eventos:", key="add_key_alcance")
-            to_add_tipo = col2.text_input("Ingrese un nuevo tipo de eventos:", key="add_key_tipo")
-            to_add_lugar = col2.text_input("Ingrese un nuevo lugar de eventos:", key="add_key_lugar")
-            
-            idioma_radio_add = col3.radio("Seleccione el idioma 👉", ['Esp', 'Eng'], horizontal =False,  key="radio_idioma_add")
-            if col3.button("Actualizar configuracion", key="add_key"):
-                config_modificada = False
-                if idioma_radio_add == 'Esp':
-                    if to_add_alcance:
-                        if to_add_alcance in config['patrones_busqueda']['Esp']['alcance']:
-                            info_1.warning(f'"**{to_add_alcance}**" ya esta configurado como alcance!!', icon="⚠️")
-                        else:
-                            config['patrones_busqueda']['Esp']['alcance'].append(to_add_alcance)
-                            config_modificada = True
-                            actualizar_configuracion(config)
-                            info_1.markdown(f'"✔️ Alcance **{to_add_alcance}**" Se adiciono a la configuracion!!!')
-                             
-                    if to_add_tipo:
-                        if to_add_tipo in config['patrones_busqueda']['Esp']['tipo_evento']:
-                            info_2.warning(f'"**{to_add_tipo}**" ya esta configurado como alcance!!', icon="⚠️")
-                        else:
-                            config['patrones_busqueda']['Esp']['tipo_evento'].append(to_add_tipo)
-                            config_modificada = True
-                            actualizar_configuracion(config)
-                            info_2.markdown(f'"✔️ Tipo de evento **{to_add_tipo}**" Se adiciono a la configuracion!!!')
-                        
-                    if to_add_lugar:
-                        if to_add_lugar in config['lugares_busqueda']['Esp']:
-                            info_3.warning(f'"**{to_add_lugar}**" ya esta configurado como alcance!!', icon="⚠️")
-                        else:
-                            config['lugares_busqueda']['Esp'].append(to_add_lugar)
-                            config_modificada = True
-                            actualizar_configuracion(config)
-                            info_3.markdown(f'"✔️ Tipo de evento **{to_add_lugar}**" Se adiciono a la configuracion!!!')
-                          
-                    
-                elif idioma_radio_add == 'Eng':
-                    if to_add_alcance:
-                        if to_add_alcance in config['patrones_busqueda']['Eng']['alcance']:
-                            info_1.warning(f'"**{to_add_alcance}**" ya esta configurado como alcance!!', icon="⚠️")
-                        else:
-                            config['patrones_busqueda']['Eng']['alcance'].append(to_add_alcance)
-                            config_modificada = True
-                            actualizar_configuracion(config)
-                            info_1.markdown(f'"✔️ Alcance **{to_add_alcance}**" Se adiciono a la configuracion!!!')
-                             
-                    if to_add_tipo:
-                        if to_add_tipo in config['patrones_busqueda']['Eng']['tipo_evento']:
-                            info_2.warning(f'"**{to_add_tipo}**" ya esta configurado como alcance!!', icon="⚠️")
-                        else:
-                            config['patrones_busqueda']['Eng']['tipo_evento'].append(to_add_tipo)
-                            config_modificada = True
-                            actualizar_configuracion(config)
-                            info_2.markdown(f'"✔️ Tipo de evento **{to_add_tipo}**" Se adiciono a la configuracion!!!')
-                        
-                    if to_add_lugar:
-                        if to_add_lugar in config['lugares_busqueda']['Eng']:
-                            info_3.warning(f'"**{to_add_lugar}**" ya esta configurado como alcance!!', icon="⚠️")
-                        else:
-                            config['lugares_busqueda']['Eng'].append(to_add_lugar)
-                            config_modificada = True
-                            actualizar_configuracion(config)
-                            info_3.markdown(f'"✔️ Tipo de evento **{to_add_lugar}**" Se adiciono a la configuracion!!!')
-                
-            
-        st.markdown("***Eliminar Criterios de Busqueda*** ")
-        info_4 = st.empty() 
-        info_5 = st.empty() 
-        info_6 = st.empty()       
-        col1, col2= st.columns([2, 6])
-        rm_cri_chk_b = col1.checkbox('Eliminar', key="rm_cri")
-        if rm_cri_chk_b:
-            idioma_radio_rmv = col1.radio("Seleccione el idioma 👉", ['Esp', 'Eng'], horizontal =False, key="radio_idioma_rm")
-            list_rmv_alcance = []
-            list_rmv_tipo = []
-            list_rmv_lugar = []
-            config = cargar_configuracion(PATH_DATA + FN_KEYW_JSON)
-            # if idioma_radio_rmv == "Esp":
-            with st.container(border=True):
-                col2_1, col2_2, col2_3 = col2.columns([3, 3, 3])
-
-                col2_1.markdown("***Alcance*** ")
-                for i, criterio in enumerate(config['patrones_busqueda'][idioma_radio_rmv]['alcance']):
-                    rm_cb_alcance = col2_1.checkbox(criterio, key=f"cb_alcance{i}")
-                    
-                col2_2.markdown("***Tipo Evento*** ")
-                for i, criterio in enumerate(config['patrones_busqueda'][idioma_radio_rmv]['tipo_evento']):
-                    rm_cb_tipo= col2_2.checkbox(criterio, key=f"cb_tipo{i}")
-                    
-                col2_3.markdown("***Lugares*** ")
-                for i, criterio in enumerate(config['lugares_busqueda'][idioma_radio_rmv]):
-                    if criterio != "":
-                        rm_cb_lugar= col2_3.checkbox(criterio, key=f"cb_lugar{i}")
-                    
-                if col1.button("Actualizar Configuracion", key="rm_key"):
-                    for i, criterio in enumerate(config['patrones_busqueda'][idioma_radio_rmv]['alcance']):
-                        if st.session_state[f"cb_alcance{i}"]:
-                            list_rmv_alcance.append(criterio) 
-                            
-                    for i, criterio in enumerate(config['patrones_busqueda'][idioma_radio_rmv]['tipo_evento']):
-                        if st.session_state[f"cb_tipo{i}"]:
-                            list_rmv_tipo.append(criterio) 
-
-                    for i, criterio in enumerate(config['lugares_busqueda'][idioma_radio_rmv]):
-                        if criterio != "":
-                            if st.session_state[f"cb_lugar{i}"]:
-                                list_rmv_lugar.append(criterio) 
-
-                    for item in list_rmv_alcance:
-                        st.write(len(config['patrones_busqueda'][idioma_radio_rmv]['alcance']))
-                        if len(config['patrones_busqueda'][idioma_radio_rmv]['alcance']) > 1:
-                            config['patrones_busqueda'][idioma_radio_rmv]['alcance'].remove(item)
-                        else:
-                            info_4.warning(f'No es posible eliminar todas las opciones configuradas en alcance!!', icon="⚠️")
-                            
-                    for item in list_rmv_tipo:
-                        if len(config['patrones_busqueda'][idioma_radio_rmv]['tipo_evento']) > 1:
-                            config['patrones_busqueda'][idioma_radio_rmv]['tipo_evento'].remove(item)
-                        else:
-                            info_5.warning(f'No es posible eliminar todas las opciones configuradas en alcance!!', icon="⚠️")
-                            
-                    for item in list_rmv_lugar:
-                        config['lugares_busqueda'][idioma_radio_rmv].remove(item)
-
-                    
-                    actualizar_configuracion(config)
-                    # info_4.markdown(f'"✔️ Configuracion actualizada!!!')
-                    
-                    
-                        
-                    # if col1.button("Actualizar Configuracion", key="rm_key"):
-                    #     for i, criterio in enumerate(config['patrones_busqueda'][idioma_radio_rmv]['alcance']):
-                    #         if st.session_state[f"cb{i}"]:
-                    #             list_rmv.append(criterio) 
-                    #             # config['patrones_busqueda']['Esp']['alcance'].remove(criterio)
-                    #     for item_rmv in list_rmv:
-                    #         config['patrones_busqueda']['Esp']['alcance'].remove(item_rmv)
-                    #     st.write(list_rmv)
-                    #     actualizar_configuracion(config)
-                                    
-
-            
-            
-            
-            
-            # to_del_cri = col2.selectbox(
-            #                 "Seleccione el criterio ",
-            #                 key="df_key_w_list",
-            #                 options=config['criterios'],
-            #             )
-        # if st.button("Actualizar Configuracion", key="rm_key"):
-        #     if add_cri_chk_b:
-        #         config['criterios'].append(to_add_cri)
-        #     if rm_cri_chk_b:
-        #         config['criterios'].remove(to_del_cri)
-        #     actualizar_configuracion(config)
-        #     st.write("Configuracion Actualizada!!!")
-        #     st.write(config)        
-        
-
 
 if __name__ == "__main__":
     main()
