@@ -1,6 +1,6 @@
 {
     "modelo": "GROG-LLAMA2",
-    "paginas": 1,
+    "paginas": 2,
     "base_datos": "MongoDB",
     "periodo": "Ultima semana",
     "orden": "Sin orden",
@@ -11,31 +11,25 @@
     "patrones_busqueda": {
         "Esp": {
             "alcance": [
-                "Internacional",
-                "Mundial"
+                "Internacional"
             ],
             "tipo_evento": [
-                "Congreso",
-                "Simposio",
-                "Conferencia"
+                "Congreso"
             ]
         },
         "Eng": {
             "alcance": [
-                "World",
-                "International"
+                "World"
             ],
             "tipo_evento": [
-                "Congress",
-                "Conference",
-                "Symposium"
+                "Congress"
             ]
         }
     },
     "lugares_busqueda": {
         "Esp": [
             "",
-            "Universidad del Bosque"
+            "Centro de convenciones Cartagena de indias"
         ],
         "Eng": [
             ""

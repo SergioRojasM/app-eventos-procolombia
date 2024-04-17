@@ -21,9 +21,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 import google.generativeai as genai
 from menu import menu
 
-# GOOGLE_API_KEY = "AIzaSyC4NWD6EqPQ-uM4xDX3MQ-Y7fgzQ1jrxU4"  # add your GOOGLE API key here
-# os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
-# llm = ChatGoogleGenerativeAI(model="gemini-pro")
+from pages.lib.funciones import extraer_informacion_general_gemini, filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda
+from pages.lib.funciones import limpiar_df_event, web_scrapper
+from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db, sf_check_event_db, sf_insert_rows
+from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db, mdb_check_event_db, mdb_insert_doc
 
 # Definicion de rutas y constantes
 PATH_CWD = os.getcwd()
@@ -41,24 +42,6 @@ st.image(PATH_IMG + "header_cocora.jpg")
 st.subheader("Busqueda Manual de informacion por URL")
 
 
-def cargar_contraseñas(nombre_archivo):
-    with open(nombre_archivo, 'r') as f:
-        contraseñas = toml.load(f)
-    return contraseñas
-
-# Define your desired data structure.
-class event(BaseModel):
-    resume: str = Field(description="The resume of the context in few words")
-    there_is_event: str = Field(description="Defines if any asociative event is mentioned. If so answer 'Yes', if not answer 'No'")
-    title: str = Field(description="The name of the event, dont use Acronyms, dont use colon punctuation, if not sure keep blank")
-    general_title: Optional[str] = Field(description="The name of the event, dont use Acronyms, don't use colon punctuation, don't specify the version of the event, if not sure keep blank")
-    date: Optional[str] = None 
-    year: Optional[str] = Field(description="The year of the event, if not sure keep blank")
-    description: Optional[str] = Field(description="The description of the event, don't use colon punctuation, if not sure keep blank")
-    country: Optional[str] = Field(description="The location of the event, if not sure keep blank")
-    city: Optional[str] = Field(description="The city of the event, if not sure keep blank")
-    place: Optional[str] = Field(description="The name of the place where the event takes place, if not sure keep blank")
-    key_words: Optional[str] = Field(description="Only five key words of thats describe de event, separated by comma")
     
 class Event(BaseModel):
     title: str  = Field(description="The name of the event, dont use initials, dont use punctuation marks")
@@ -138,27 +121,6 @@ def query_google_search(google_query, page, search_engine_keys, add_params = {})
       print(f"An error occurred: {e}")
       return None
 
-def web_scrapper(url):
-  """
-
-  """
-  # Initializing variable
-  lang_request = TextRequestsWrapper()
-  try:
-    lang_request.get(url)
-  except:
-    print('ERR', 'Error scrappiing the url')
-    return None
-  # Initializing variable
-  result = lang_request.get(url)
-  # Initializing variable
-  bs_result = BeautifulSoup(result, features="html.parser")
-  # Calculating result
-  text = bs_result.get_text()
-  text = text.replace("\n", " ")
-  text = text.replace("\t", " ")
-  return text
-
 def es_archivo_pdf(url):
     try:
         # Realizar una solicitud HEAD para obtener solo los encabezados de la respuesta
@@ -206,40 +168,6 @@ def check_similar (new_key, old_keys):
         else:
             continue
     return False
-
-def extraer_informacion_general_gemini(url, API_KEY_GEMINI):
-    os.environ["GOOGLE_API_KEY"] = API_KEY_GEMINI
-    llm = ChatGoogleGenerativeAI(model="gemini-pro")
-    model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Your Task is to extract any event showed in following "Context" that can be related to the "event information". 
-    "context":{context_str}
-    \n{format_instructions}\n
-    """
-    # parser = YamlOutputParser(pydantic_object=event)
-    parser = YamlOutputParser(pydantic_object=event)
-
-    # Realizar el query a Gemini
-    llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-    llm_prompt = PromptTemplate(
-        template=llm_prompt_template,
-        input_variables=["context_str"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-    context = web_scrapper(url)
-    if context.startswith('Not Acceptable!'):
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        
-    tokens_size = int(model.count_tokens(str(llm_prompt) + context).total_tokens)
-    if tokens_size > 30000:
-        return None
-    else:
-        stuff_chain = llm_prompt | llm | parser
-        llm_result = stuff_chain.invoke({"context_str": context, "event_str": event} )
-        return llm_result
 
 def extraer_informacion_eventos_rel_gemini(url, event, API_KEY_GEMINI):
     
@@ -331,7 +259,7 @@ def buscar_eventos_relacionados(llm_result_event, contraseñas):
                     continue
                 else:
                     print(google_query_result[url]['link'], search_pattern)
-                    ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.resume + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
+                    ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.description + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
                     ref_event_key = llm_result_event.title + " | " + llm_result_event.country + " | " + llm_result_event.year 
                     try:   
                         yaml_events_related = extraer_informacion_eventos_rel_gemini(google_query_result[url]['link'], ref_event_info , contraseñas["api_gemini"]['KEY'])
@@ -413,7 +341,7 @@ def buscar_informacion_asistentes(llm_result_event, contraseñas):
                 continue
             else:
                 print(google_query_result[url]['link'], search_pattern)
-                ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.resume + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
+                ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.description + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
                 try:   
                     yaml_envent_asistants = extraer_informacion_asistentes_gemini(google_query_result[url]['link'], ref_event_info , contraseñas["api_gemini"]['KEY'])
                     if yaml_envent_asistants.participants not in [None, 'None', '', ' '] and not check_similar(yaml_envent_asistants.participants, asistants_list):
@@ -426,8 +354,40 @@ def buscar_informacion_asistentes(llm_result_event, contraseñas):
                     continue
     return "|".join(asistants_list) 
 
-
-
+def buscar_evento(url, contraseñas):
+    date =  dt.datetime.today().date().strftime("%Y-%m-%d")
+    sel_db_mongo = True 
+    sel_db_snowflake = False
+    llm_result = extraer_informacion_general_gemini(url, contraseñas["api_gemini"]['KEY'])
+        
+    if llm_result != None:
+        if (sel_db_snowflake and sf_check_event_db(url, '', contraseñas['snowflake'])) or \
+        (sel_db_mongo and mdb_check_event_db(url, '', contraseñas['mongo_db'])):
+            st.write("Evento Previamente procesado")
+            return llm_result
+        else:
+            df_event_info = pd.DataFrame([llm_result.__dict__])
+            df_event_info ['status']  = 'OK'   
+            df_event_info['google_title'] = None
+            df_event_info['google_snippet'] = None
+            df_event_info['google_long_description'] = None
+            df_event_info['google_url'] = url
+            df_event_info['search_criteria'] =  None
+            df_event_info['date_processed'] =  date
+            df_event_info = limpiar_df_event(df_event_info)
+            if sel_db_snowflake:
+                resultado = sf_insert_rows(df_event_info, 'fct_eventos', contraseñas['snowflake'])
+            elif sel_db_mongo:
+                df_event_info['date_processed'] = pd.to_datetime(df_event_info['date_processed'])
+                resultado = mdb_insert_doc(df_event_info, 'fct_eventos', contraseñas['mongo_db'])
+            if resultado == True:
+                st.write("Evento Insertados Correctamente")
+            else:
+                st.write("Error Insertando Evento. Error: {}".format(resultado))
+            return llm_result
+    else:
+        return None
+    
 def main():
     import time
     df_rel_events = pd.DataFrame(columns=['event_key',  'rel_event_key','rel_event_title', 'rel_event_year', 'rel_event_country','rel_event_link'])
@@ -436,49 +396,54 @@ def main():
     st.divider()
     col1, col2 = st.columns([2, 5])
     col1.text_input("Ingrese la url", key="url")
-    
+    evento_rel = col1.checkbox('Buscar eventos relacionados', key="evento_rel")
+    evento_asistente = col1.checkbox('Buscar asistentes al evento', key="evento_asistente")
+    col1.divider()
     iniciar = col1.button("Iniciar Busqueda")
     
     # Añadir un botón a la interfaz de usuario
     if iniciar:
         placeholder_1 = col2.empty()
         placeholder_1.write(f"⏳ Buscando Informacion de eventos en la pagina {st.session_state.url}!!")
-        # llm_result={'there_is_event': 'True', 'title': 'Test Title', 'Resume': 'Test Resumeasdasdasdasdasdasdddddddddzxcwewooadiu9w8aisduh', 'country': 'Colombia',  'year': '2023'}
-        llm_result = extraer_informacion_general_gemini(st.session_state.url, contraseñas["api_gemini"]['KEY'])
-        time.sleep(3)
-        if llm_result.there_is_event == "True":
-            placeholder_1.write(f"✔️ Hemos encontrado eventos en la pagina {st.session_state.url}")
+        llm_result = buscar_evento(st.session_state.url, contraseñas)
+        if llm_result != None:
+        
+            if llm_result.there_is_event == "True":
+                placeholder_1.write(f"✔️ Hemos encontrado eventos en la pagina {st.session_state.url}")
 
-            c_1 = col2.container(border=True)
-            with col2.expander(f"Ver detalles del Evento: **{llm_result.title}, {llm_result.country}, {llm_result.year}**"):
-                event_info = f"""**- Titulo del evento:** {llm_result.title}  
-                **- Titulo del evento:** {llm_result.resume}  
-                **- Pais del evento:** {llm_result.country} 
-                **- Año del evento:** {llm_result.year} 
-                **- Fecha del evento:** {llm_result.date}  
-                **- Detalles:** {llm_result.description}
-                """
-                st.markdown(event_info)
+                c_1 = col2.container(border=True)
+                with col2.expander(f"Ver detalles del Evento: **{llm_result.title}, {llm_result.country}, {llm_result.year}**"):
+                    event_info = f"""**- Titulo del evento:** {llm_result.title}  
+                    **- Pais del evento:** {llm_result.country} 
+                    **- Año del evento:** {llm_result.year} 
+                    **- Fecha del evento:** {llm_result.date}  
+                    **- Detalles:** {llm_result.description}
+                    """
+                    st.markdown(event_info)
                 
-            placeholder_2 = col2.empty()
-            placeholder_2.write(f"⏳ Buscando Informacion de eventos relacionados a {llm_result.title}!!")
+                if evento_rel:
+                    placeholder_2 = col2.empty()
+                    placeholder_2.write(f"⏳ Buscando Informacion de eventos relacionados a {llm_result.title}!!")
 
-            df_rel_events = buscar_eventos_relacionados(llm_result, contraseñas)
-            if len(df_rel_events) > 0:
-                placeholder_2.write(f"✔️ Hemos encontrado eventos relacionados a  {llm_result.title}")
-                
-                with col2.expander(f"Ver detalles de los eventos relacionados"):
-                    st.dataframe(df_rel_events, use_container_width=True, hide_index  = True)
+                    df_rel_events = buscar_eventos_relacionados(llm_result, contraseñas)
+                    if len(df_rel_events) > 0:
+                        placeholder_2.write(f"✔️ Hemos encontrado eventos relacionados a  {llm_result.title}")
+                        
+                        with col2.expander(f"Ver detalles de los eventos relacionados"):
+                            st.dataframe(df_rel_events, use_container_width=True, hide_index  = True)
 
-            
-            placeholder_3 = col2.empty()
-            placeholder_3.write(f"⏳ Buscando Informacion de asistentes al evento a {llm_result.title}!!")
-            asistentes = buscar_informacion_asistentes(llm_result, contraseñas)
-            if asistentes:
-                placeholder_3.write(f"✔️ Hemos informacion de asistentes al evento a {llm_result.title}!!")
-                
-                with col2.expander(f"Ver Informacion de los asistentes"):
-                    st.write(asistentes)
+                if evento_asistente:
+                    placeholder_3 = col2.empty()
+                    placeholder_3.write(f"⏳ Buscando Informacion de asistentes al evento a {llm_result.title}!!")
+                    asistentes = buscar_informacion_asistentes(llm_result, contraseñas)
+                    if asistentes:
+                        placeholder_3.write(f"✔️ Hemos informacion de asistentes al evento a {llm_result.title}!!")
+                        
+                        with col2.expander(f"Ver Informacion de los asistentes"):
+                            st.write(asistentes)
+                            
+        else:
+            placeholder_1.write(f"⚠️ No hemos encontrado eventos en la pagina {st.session_state.url}")
             
 
 
