@@ -1,7 +1,7 @@
 {
     "modelo": "GROG-LLAMA2",
     "paginas": 2,
-    "base_datos": "MongoDB",
+    "base_datos": "Snowflake",
     "periodo": "Ultima semana",
     "orden": "Sin orden",
     "criterios": [

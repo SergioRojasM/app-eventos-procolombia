@@ -3,6 +3,8 @@ from pymongo.server_api import ServerApi
 import pandas as pd
 import numpy as np
 
+#### FUNCIONES MONGODB
+
 def mdb_insert_doc(df, nombre_coleccion, mdb_config):
     uri = f"mongodb+srv://{mdb_config['user']}:{mdb_config['password']}@{mdb_config['cluster']}.hscob2f.mongodb.net/?retryWrites=true&w=majority&appName={mdb_config['cluster']}"
     conn_status = False
@@ -56,3 +58,6 @@ def mdb_check_event_db(google_url, google_title, mdb_config):
         return True
     else:
         return False
+
+
+    

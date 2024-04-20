@@ -23,8 +23,10 @@ from menu import menu
 
 from pages.lib.funciones import extraer_informacion_general_gemini, filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda
 from pages.lib.funciones import limpiar_df_event, web_scrapper
-from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db, sf_check_event_db, sf_insert_rows
-from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db, mdb_check_event_db, mdb_insert_doc
+#from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db, sf_check_event_db, sf_insert_rows
+#from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db, mdb_check_event_db, mdb_insert_doc
+from pages.lib.funciones_db import cargar_eventos_procesados_db, check_event_db, insert_event_db, insert_errors_db
+
 
 # Definicion de rutas y constantes
 PATH_CWD = os.getcwd()
@@ -354,15 +356,14 @@ def buscar_informacion_asistentes(llm_result_event, contraseñas):
                     continue
     return "|".join(asistants_list) 
 
-def buscar_evento(url, contraseñas):
+def buscar_evento(url, contraseñas, config):
     date =  dt.datetime.today().date().strftime("%Y-%m-%d")
     sel_db_mongo = True 
     sel_db_snowflake = False
     llm_result = extraer_informacion_general_gemini(url, contraseñas["api_gemini"]['KEY'])
-        
+    st.write(llm_result)
     if llm_result != None:
-        if (sel_db_snowflake and sf_check_event_db(url, '', contraseñas['snowflake'])) or \
-        (sel_db_mongo and mdb_check_event_db(url, '', contraseñas['mongo_db'])):
+        if check_event_db(url,'', contraseñas, config['base_datos']):
             st.write("Evento Previamente procesado")
             return llm_result
         else:
@@ -375,11 +376,7 @@ def buscar_evento(url, contraseñas):
             df_event_info['search_criteria'] =  None
             df_event_info['date_processed'] =  date
             df_event_info = limpiar_df_event(df_event_info)
-            if sel_db_snowflake:
-                resultado = sf_insert_rows(df_event_info, 'fct_eventos', contraseñas['snowflake'])
-            elif sel_db_mongo:
-                df_event_info['date_processed'] = pd.to_datetime(df_event_info['date_processed'])
-                resultado = mdb_insert_doc(df_event_info, 'fct_eventos', contraseñas['mongo_db'])
+            resultado = insert_event_db(df_event_info, contraseñas, config['base_datos']) 
             if resultado == True:
                 st.write("Evento Insertados Correctamente")
             else:
@@ -392,7 +389,7 @@ def main():
     import time
     df_rel_events = pd.DataFrame(columns=['event_key',  'rel_event_key','rel_event_title', 'rel_event_year', 'rel_event_country','rel_event_link'])
     contraseñas = cargar_contraseñas(ACCESS_PATH)
-
+    config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
     st.divider()
     col1, col2 = st.columns([2, 5])
     col1.text_input("Ingrese la url", key="url")
@@ -405,7 +402,7 @@ def main():
     if iniciar:
         placeholder_1 = col2.empty()
         placeholder_1.write(f"⏳ Buscando Informacion de eventos en la pagina {st.session_state.url}!!")
-        llm_result = buscar_evento(st.session_state.url, contraseñas)
+        llm_result = buscar_evento(st.session_state.url, contraseñas,config )
         if llm_result != None:
         
             if llm_result.there_is_event == "True":

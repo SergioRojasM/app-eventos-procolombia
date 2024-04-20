@@ -1,6 +1,7 @@
 import snowflake.connector
 import pandas as pd
 import numpy as np
+
 def sf_insert_rows(df, nombre_tabla, sf_config):
     conn_status = False
     try:
@@ -72,6 +73,8 @@ def sf_execute_query(sql, sf_config):
 
 def sf_cargar_eventos_procesados_db(sf_config):
     sql = "SELECT * FROM BODEGA_DWH.FCT_EVENTOS"
+    df = sf_execute_query(sql, sf_config)
+    df.columns = [s.lower() for s in df.columns] 
     return sf_execute_query(sql, sf_config)
         
 def sf_check_event_db(google_url, google_title, sf_config):

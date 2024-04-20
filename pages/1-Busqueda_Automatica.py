@@ -28,8 +28,10 @@ from menu import menu
 
 from pages.lib.funciones import filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda, actualizar_configuracion
 from pages.lib.funciones import limpiar_df_event, web_scrapper, extraer_informacion_general_gemini
-from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db, sf_check_event_db, sf_insert_rows
-from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db, mdb_check_event_db, mdb_insert_doc
+#from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db, sf_check_event_db, sf_insert_rows
+#from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db, mdb_check_event_db, mdb_insert_doc
+from pages.lib.funciones_db import cargar_eventos_procesados_db, check_event_db, insert_event_db, insert_errors_db
+
 # Definicion de rutas y constantes
 PATH_CWD = os.getcwd()
 PATH_DATA = PATH_CWD + "/src/data/"
@@ -278,9 +280,8 @@ def buscar_eventos(contraseñas = None, pages=2, list_key_w= None):
                             print(df_errores_busqueda)
                             continue
 
-def buscar_eventos_v2(contraseñas = None, pages=2, list_key_w= None):
-    sel_db_mongo = True 
-    sel_db_snowflake = False
+def buscar_eventos_v2(contraseñas = None, pages=2, list_key_w= None, config = {}):
+
     date =  dt.datetime.today().date().strftime("%Y-%m-%d")
     latest_iteration = tab1_col2.empty()
     # if 
@@ -306,8 +307,7 @@ def buscar_eventos_v2(contraseñas = None, pages=2, list_key_w= None):
                     bar.progress(i+step)
                     i = i+step
                     
-                    if (sel_db_snowflake and sf_check_event_db(url, title, contraseñas['snowflake'])) or \
-                        (sel_db_mongo and mdb_check_event_db(url, title, contraseñas['mongo_db'])):
+                    if (check_event_db(url, title, contraseñas, config['base_datos'])):
                             
                         print("Evento Ya Procesado")
                         continue
@@ -329,14 +329,11 @@ def buscar_eventos_v2(contraseñas = None, pages=2, list_key_w= None):
                                 df_event_info['search_criteria'] =  str(key_W)
                                 df_event_info['date_processed'] =  date
                                 df_event_info = limpiar_df_event(df_event_info)
+                                df_event_info['date_processed'] = pd.to_datetime(df_event_info['date_processed'])
                                 # Filtrar y guardar eventos sin errores
                                 df_event_info = df_event_info[df_event_info['status'] == "OK"]
                                 df_events_busqueda = pd.concat([df_events_busqueda, df_event_info])
-                                if sel_db_snowflake:
-                                    resultado = sf_insert_rows(df_event_info, 'fct_eventos', contraseñas['snowflake'])
-                                elif sel_db_mongo:
-                                    df_event_info['date_processed'] = pd.to_datetime(df_event_info['date_processed'])
-                                    resultado = mdb_insert_doc(df_event_info, 'fct_eventos', contraseñas['mongo_db'])
+                                resultado = insert_event_db(df_event_info, contraseñas, config['base_datos'])                                    
                                 if resultado == True:
                                     print("Evento Insertados Correctamente")
                                 else:
@@ -354,11 +351,7 @@ def buscar_eventos_v2(contraseñas = None, pages=2, list_key_w= None):
                             df_evento_error = pd.DataFrame([dict_error])
                             df_errores_busqueda = pd.concat([df_errores_busqueda, df_evento_error])
                             #df_errores_busqueda.to_excel(PATH_DATA + "errors_today.xlsx", index=False)
-                            if sel_db_snowflake:
-                                resultado = sf_insert_rows(df_evento_error, 'fct_errores', contraseñas['snowflake'])
-                            elif sel_db_mongo:
-                                df_evento_error['date_processed'] = pd.to_datetime(df_evento_error['date_processed'])
-                                resultado = mdb_insert_doc(df_evento_error, 'fct_errores', contraseñas['mongo_db'])
+                            resultado = insert_event_db(df_evento_error, contraseñas, config['base_datos'])  
                                 
                             if resultado == True:
                                 print("Errores Insertados Correctamente")
@@ -635,7 +628,7 @@ def main():
         iniciar_busqueda = tab1_col1.button("Iniciar Busqueda Automatica")
         if iniciar_busqueda:
             static_0.write(f"⏳ Buscando Informacion de eventos!!") 
-            df_events = buscar_eventos_v2(contraseñas, pages=config['paginas'], list_key_w= criterios)
+            df_events = buscar_eventos_v2(contraseñas, pages=config['paginas'], list_key_w= criterios, config= config)
             static_0.write(f"✔️ Hemos finalizado la busqueda de eventos ")   
             with st.expander("Ver Resultados Encontrados:"):
                 with st.container():
@@ -644,7 +637,7 @@ def main():
             
     with tab2:
 
-        df_events_hist = mdb_cargar_eventos_procesados_db(contraseñas['mongo_db'])
+        df_events_hist = cargar_eventos_procesados_db(contraseñas, config['base_datos'])
         df_events_hist['date_processed'] = pd.to_datetime(df_events_hist['date_processed'])
         df_events_hist['there_is_event'] = df_events_hist['date_processed'].astype(bool)
         df_events_hist_filter = df_events_hist[(df_events_hist['status'] == "OK") &

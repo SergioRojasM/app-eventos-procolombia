@@ -25,6 +25,8 @@ from langchain_google_genai import (
     HarmCategory,
 )
 import google.generativeai as genai
+from pages.lib.config import FN_KEYW_JSON, ACCESS_PATH, PATH_DATA
+
 
 class event(BaseModel):
 
@@ -353,7 +355,6 @@ def filtrar_df(df):
                 )
                 df = df[df[column].isin(user_cat_input)]
     return df
-
 
 
 

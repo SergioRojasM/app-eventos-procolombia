@@ -11,6 +11,7 @@ PATH_DATA = PATH_CWD + "/src/data/"
 PATH_IMG  = PATH_DATA + 'img/'
 
 
+
 st.set_page_config(page_title="Mi Aplicación Streamlit", page_icon=":rocket:", layout="wide")
 st.image(PATH_IMG + "header_ctg.jpg")
 menu()
@@ -30,3 +31,22 @@ st.markdown("""***2. Dashboard:*** El aplicativo cuenta con un panel para seguim
 st.page_link("pages/4-Dashboard.py", label="👉 :red[Dashboard]")
 st.markdown("""***3. configuración:*** El aplicativo cuenta con un panel de configuración, donde se incluyen todas las opciones de conexión, almacenamiento y criterios de búsqueda del aplicativo.""")
 st.page_link("pages/5-Configuracion.py", label="👉 :red[configuración]")
+st.divider()
+
+# Pruebas
+
+
+from pages.lib.funciones import filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda, actualizar_configuracion
+from pages.lib.funciones import limpiar_df_event, web_scrapper, extraer_informacion_general_gemini
+from pages.lib.funciones_db import cargar_eventos_procesados_db, check_event_db
+from pages.lib.config import FN_KEYW_JSON, ACCESS_PATH 
+
+config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
+contraseñas = cargar_contraseñas(ACCESS_PATH) 
+
+
+df_eventos_sf = cargar_eventos_procesados_db(contraseñas, 'Snowflake')
+df_eventos_mdb = cargar_eventos_procesados_db(contraseñas, 'MongoDB')
+
+st.dataframe(df_eventos_sf)
+st.dataframe(df_eventos_mdb)
