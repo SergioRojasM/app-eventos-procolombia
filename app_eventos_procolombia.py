@@ -36,17 +36,17 @@ st.divider()
 # Pruebas
 
 
-from pages.lib.funciones import filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda, actualizar_configuracion
-from pages.lib.funciones import limpiar_df_event, web_scrapper, extraer_informacion_general_gemini
-from pages.lib.funciones_db import cargar_eventos_procesados_db, check_event_db
-from pages.lib.config import FN_KEYW_JSON, ACCESS_PATH 
+# from pages.lib.funciones import filtrar_df, cargar_eventos_procesados_archivo, cargar_configuracion, cargar_contraseñas, obtener_criterios_busqueda, actualizar_configuracion
+# from pages.lib.funciones import limpiar_df_event, web_scrapper, extraer_informacion_general_gemini
+# from pages.lib.funciones_db import cargar_eventos_procesados_db, check_event_db
+# from pages.lib.config import FN_KEYW_JSON, ACCESS_PATH 
 
-config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
-contraseñas = cargar_contraseñas(ACCESS_PATH) 
+# config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
+# contraseñas = cargar_contraseñas(ACCESS_PATH) 
 
 
-df_eventos_sf = cargar_eventos_procesados_db(contraseñas, 'Snowflake')
-df_eventos_mdb = cargar_eventos_procesados_db(contraseñas, 'MongoDB')
+# df_eventos_sf = cargar_eventos_procesados_db(contraseñas, 'Snowflake')
+# df_eventos_mdb = cargar_eventos_procesados_db(contraseñas, 'MongoDB')
 
-st.dataframe(df_eventos_sf)
-st.dataframe(df_eventos_mdb)
+# st.dataframe(df_eventos_sf)
+# st.dataframe(df_eventos_mdb)

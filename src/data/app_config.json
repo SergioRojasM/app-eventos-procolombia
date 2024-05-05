@@ -1,8 +1,8 @@
 {
-    "modelo": "GROG-LLAMA2",
+    "modelo": "GROQ-LLAMA2",
     "paginas": 2,
-    "base_datos": "Snowflake",
-    "periodo": "Ultima semana",
+    "base_datos": "MongoDB",
+    "periodo": "Sin restriccion",
     "orden": "Sin orden",
     "criterios": [
         "World Congress-Colombia",
@@ -29,10 +29,13 @@
     "lugares_busqueda": {
         "Esp": [
             "",
-            "Centro de convenciones Cartagena de indias"
+            "Universidad del Bosque"
         ],
         "Eng": [
             ""
         ]
-    }
+    },
+    "paginas_busqueda": [
+        "https://www.uniandes.edu.co/"
+    ]
 }
