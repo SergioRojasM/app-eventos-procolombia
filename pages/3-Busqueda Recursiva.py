@@ -27,7 +27,6 @@ pd.set_option('future.no_silent_downcasting', True)
 # Configuracion de la pagina
 
 st.subheader("Busqueda Recursiva de Eventos de Turismo")
-menu()
 tab1, tab2= st.tabs(["Configuración", "Busqueda Recursiva"])
 tab2_col1, tab2_col2 = tab2.columns([2, 5])
 static_0 = tab2_col2.empty()
@@ -40,8 +39,9 @@ def buscar_eventos_recursivo(contraseñas, lista_paginas, config):
     date =  dt.datetime.today().date().strftime("%Y-%m-%d")
 
     for pagina in lista_paginas:
-        
+
         lista_urls = buscar_urls_pagina(pagina)
+
         step =  1 / (len(lista_urls))
         st.write(step, len(lista_urls))
         static_3.text(f'Progreso 0 %')

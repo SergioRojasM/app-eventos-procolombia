@@ -3,8 +3,7 @@ import datetime as dt
 import os, toml, requests
 import pandas as pd
 from pages.lib.funciones import cargar_eventos_procesados_archivo, filtrar_df, cargar_contraseñas
-from pages.lib.funciones_mongo import mdb_cargar_eventos_procesados_db
-from pages.lib.funciones_snowflake import sf_cargar_eventos_procesados_db
+
 from menu import menu
 import plotly.express as px
 from pages.lib.funciones import cargar_configuracion,  actualizar_configuracion

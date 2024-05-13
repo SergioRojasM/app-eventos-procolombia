@@ -376,8 +376,8 @@ def web_scrapper(url):
         bs_result = BeautifulSoup(result, features="html.parser")
         # Calculating result
         text = bs_result.get_text()
-        text = text.replace("\n", " ")
-        text = text.replace("\t", " ")
+        # text = text.replace("\n", " ")
+        # text = text.replace("\t", " ")
         print('LangChain')
     except  Exception as e:
         print(f'Error LangChain: {e}')
@@ -1012,11 +1012,14 @@ def buscar_urls_pagina(sitio_web):
         enlaces = soup.find_all('a')
         urls = []
         for enlace in enlaces:
-            url = enlace.get('href')
-            if url and not url.startswith('#'):
-                url_absoluta = urljoin(sitio_web, url)
-                if url_absoluta not in urls:
-                    urls.append(url_absoluta)
+            try:
+                url = enlace.get('href')
+                if url and not url.startswith('#'):
+                    url_absoluta = urljoin(sitio_web, url)
+                    if url_absoluta not in urls:
+                        urls.append(url_absoluta)
+            except:
+                continue
         return urls
     else:
         print("Error al obtener la página:", respuesta.status_code)
