@@ -1012,11 +1012,14 @@ def buscar_urls_pagina(sitio_web):
         enlaces = soup.find_all('a')
         urls = []
         for enlace in enlaces:
-            url = enlace.get('href')
-            if url and not url.startswith('#'):
-                url_absoluta = urljoin(sitio_web, url)
-                if url_absoluta not in urls:
-                    urls.append(url_absoluta)
+            try:
+                url = enlace.get('href')
+                if url and not url.startswith('#'):
+                    url_absoluta = urljoin(sitio_web, url)
+                    if url_absoluta not in urls:
+                        urls.append(url_absoluta)
+            except:
+                continue
         return urls
     else:
         print("Error al obtener la página:", respuesta.status_code)
