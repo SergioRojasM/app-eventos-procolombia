@@ -376,8 +376,8 @@ def web_scrapper(url):
         bs_result = BeautifulSoup(result, features="html.parser")
         # Calculating result
         text = bs_result.get_text()
-        text = text.replace("\n", " ")
-        text = text.replace("\t", " ")
+        # text = text.replace("\n", " ")
+        # text = text.replace("\t", " ")
         print('LangChain')
     except  Exception as e:
         print(f'Error LangChain: {e}')
