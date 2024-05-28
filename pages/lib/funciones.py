@@ -138,8 +138,7 @@ def actualizar_configuracion(configuracion):
             json.dump(configuracion, archivo, indent=4)
 
 def cargar_contraseñas(nombre_archivo):
-    #with open(nombre_archivo, 'r') as f:
-    #    contraseñas = toml.load(f)
+
     return st.secrets
 
 def obtener_criterios_busqueda(config):

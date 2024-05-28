@@ -1,6 +1,6 @@
 {
-    "modelo": "GROQ-LLAMA2",
-    "paginas": 2,
+    "modelo": "GROQ-MIXTRAL",
+    "paginas": 1,
     "base_datos": "MongoDB",
     "periodo": "Sin restriccion",
     "orden": "Sin orden",
@@ -28,14 +28,13 @@
     },
     "lugares_busqueda": {
         "Esp": [
-            "",
-            "Universidad del Bosque"
+            ""
         ],
         "Eng": [
             ""
         ]
     },
     "paginas_busqueda": [
-        "https://www.uniandes.edu.co/"
+        "https://www.unbosque.edu.co/"
     ]
 }

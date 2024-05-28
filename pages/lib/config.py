@@ -10,3 +10,4 @@ FN_EVENTS_TODAY = 'events_data_today.xlsx'
 FN_EVENTS_FILTER = 'events_data_filter.xlsx'
 FN_KEYW_JSON = 'app_config.json'
 ACCESS_PATH = PATH_CWD + "/.scrts/access.toml"
+

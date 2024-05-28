@@ -8,3 +8,6 @@ __pycache__/
 .streamlit/secrets.toml
 
 debug/
+
+funciones_db_bcp.py
+funciones_db_test.py

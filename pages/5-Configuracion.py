@@ -18,7 +18,7 @@ FN_EVENTS = 'events_data.xlsx'
 FN_KEYW_JSON = 'app_config.json'
 ACCESS_PATH = PATH_CWD + "/.scrts/access.toml"
 
-MODELS_DICT = {'Gemini':0, 'GROQ-LLAMA2':1}
+MODELS_DICT = {'GEMINI':0, 'GROQ-LLAMA3':1, 'GROQ-MIXTRAL':2}
 DB_DICT = {'MongoDB':0, 'Snowflake':1}
 PERIODO_DICT = {"Sin restriccion" : 0, "Ultimo año":1, "Ultimo mes":2, "Ultima semana":3}
 ORDEN_DICT = {"Sin orden":0, "Mas Recientes":1, "Los dos metodos":2}
@@ -34,10 +34,10 @@ config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
 st.header("Configuracion por defecto")
 col1_conf, col2_conf = st.columns([4,4])
 col1_conf.markdown("***Modelo LLM*** ")
-radio_modelo = col1_conf.radio(
+config['modelo'] = col1_conf.radio(
                         "Seleccione un modelo 👉",
                         key="model",
-                        options=["Gemini", "GROQ-LLAMA2"],
+                        options=["GEMINI", "GROQ-LLAMA3", "GROQ-MIXTRAL"],
                         index= MODELS_DICT[config['modelo']],
                         horizontal = True
                     )
