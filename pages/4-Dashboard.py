@@ -38,7 +38,7 @@ row1_col1.metric(label="Eventos Encontrados", value=str(len(df_events_hist_filte
 # row1_col2.metric(label="Paginas Analizadas", value=str(len(df_events_hist)) + " Paginas")
 
 
-row2_col1, row2_col2, row2_col3 = st.columns([8,8,8]) 
+row2_col1, row2_col2 = st.columns([8,8]) 
 df_events_proc_date = df_events_hist_filter.groupby('Processing Date').agg(numero_eventos=('Event title', 'count')).reset_index()
 
 # Define Colores base
@@ -47,23 +47,23 @@ light_gray = 'rgb(211, 211, 211)'
 line_width = 3
 
 
-# Crea la gráfica con la línea y los marcadores en azul
-fig = px.line(df_events_proc_date, x="Processing Date", y="numero_eventos", title="Número de Eventos por Fecha")
-fig.update_traces(line=dict(color=blue_color, width=line_width), marker=dict(color=blue_color))
-fig.update_layout(
-    title={
-        'text': "Número de Eventos por Fecha de ejecucion",
-        'y':0.9, 
-        'x':0.5, 
-        'xanchor': 'center', 
-        'yanchor': 'top', 
-        'font': dict(size=20) 
-    },
-    xaxis=dict(title="Fecha", gridcolor=light_gray),
-    yaxis=dict(title="Número de Eventos", gridcolor=light_gray)
-)
+# # Crea la gráfica con la línea y los marcadores en azul
+# fig = px.line(df_events_proc_date, x="Processing Date", y="numero_eventos", title="Número de Eventos por Fecha")
+# fig.update_traces(line=dict(color=blue_color, width=line_width), marker=dict(color=blue_color))
+# fig.update_layout(
+#     title={
+#         'text': "Número de Eventos por Fecha de ejecucion",
+#         'y':0.9, 
+#         'x':0.5, 
+#         'xanchor': 'center', 
+#         'yanchor': 'top', 
+#         'font': dict(size=20) 
+#     },
+#     xaxis=dict(title="Fecha", gridcolor=light_gray),
+#     yaxis=dict(title="Número de Eventos", gridcolor=light_gray)
+# )
 
-row2_col1.plotly_chart(fig, theme="streamlit", use_container_width=True)
+# row2_col1.plotly_chart(fig, theme="streamlit", use_container_width=True)
 
 df_events_year = df_events_hist_filter.groupby('Event Year').agg(numero_eventos=('Event title', 'count')).reset_index()
 # st.dataframe(df_events_year, use_container_width=True, hide_index  = True)
@@ -81,7 +81,7 @@ fig.update_layout(
     xaxis=dict(title="Año", gridcolor=light_gray),
     yaxis=dict(title="Número de Eventos", gridcolor=light_gray)
 )
-row2_col2.plotly_chart(fig, theme="streamlit", use_container_width=True)
+row2_col1.plotly_chart(fig, theme="streamlit", use_container_width=True)
 
 # row3_col1, row3_col2 = st.columns([8,8]) 
 
@@ -101,7 +101,7 @@ fig.update_layout(
     yaxis=dict(title="Número de Eventos", gridcolor=light_gray)
 )
 
-row2_col3.plotly_chart(fig, theme="streamlit", use_container_width=True)
+row2_col2.plotly_chart(fig, theme="streamlit", use_container_width=True)
 
 # row3_col1, row3_col2 = st.columns([8,8]) 
 
