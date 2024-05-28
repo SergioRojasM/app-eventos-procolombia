@@ -74,7 +74,7 @@ def mdb_execute_query(consulta, nombre_coleccion, mdb_config):
         
 def mdb_cargar_eventos_procesados_db(mdb_config):
     consulta = None
-    coleccion = 'fct_eventos_turismo_test'
+    coleccion = 'fct_eventos_turismo'
     df = mdb_execute_query(consulta,coleccion, mdb_config)
     #df = df.drop(columns='_id')
     return df
@@ -226,20 +226,20 @@ def check_event_db(google_url, google_title, config, db):
         return sf_check_event_db(google_url, google_title, config['snowflake'])
 
 def check_url(url, config, db):
-    destino = 'urls_procesadas_test'
+    destino = 'urls_procesadas'
     if db == "MongoDB":
         return mdb_check_url(url, config['mongo_db'], destino)
     elif db == "Snowflake":
         return sf_check_event_db(url, config['snowflake'])
     
 def check_title(title, config, db):
-    destino = 'fct_eventos_turismo_test'
+    destino = 'fct_eventos_turismo'
     if db == "MongoDB":
         return mdb_check_title(title, config['mongo_db'], destino)
 
     
 def insert_event_db(doc, config, db):
-    destino = 'fct_eventos_turismo_test'
+    destino = 'fct_eventos_turismo'
     if db == "MongoDB":
         return mdb_insert_doc(doc, destino, config['mongo_db'])
     elif db == "Snowflake":
@@ -253,7 +253,7 @@ def insert_errors_db(doc, config, db):
         return sf_insert_rows(doc, destino, config['snowflake'])
     
 def insert_google_url_info(df, config, db):
-    destino = 'urls_procesadas_test'
+    destino = 'urls_procesadas'
     if db == "MongoDB":
         return mdb_insert_doc(df, destino, config['mongo_db'])
     elif db == "Snowflake":
@@ -286,7 +286,7 @@ def mdb_get_k_nearest_results(embedding, k, nombre_coleccion, mdb_config):
         pipeline = [
         {
             '$vectorSearch': {
-            'index': 'event_vector_index_test', 
+            'index': 'event_vector_index', 
             'path': 'embedding', 
             'queryVector': embedding,
             'numCandidates': 20, 
