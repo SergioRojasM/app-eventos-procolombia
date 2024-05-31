@@ -12,18 +12,21 @@
         "Esp": {
             "alcance": [
                 "Internacional",
-                "Iberoamericano"
+                "Iberoamericano",
+                "Latinoamericano",
+                "Panamericano",
+                "Mundial"
             ],
             "tipo_evento": [
-                "Congreso"
+                "Congreso", "Conferencia", "Simposio", "Asamblea", "Seminario", "Coloquio", "Foro", "Reunion"
             ]
         },
         "Eng": {
             "alcance": [
-                "World"
+                "World", "Panamerican", "International", "Latin American", "South American"
             ],
             "tipo_evento": [
-                "Congress"
+                "Congress", "Congress", "Conference", "Symposium", "Assembly"
             ]
         }
     },
