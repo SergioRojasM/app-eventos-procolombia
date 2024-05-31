@@ -1,5 +1,5 @@
 {
-    "modelo": "GROQ-MIXTRAL",
+    "modelo": "GEMINI",
     "paginas": 2,
     "base_datos": "MongoDB",
     "periodo": "Sin restriccion",
@@ -18,15 +18,30 @@
                 "Mundial"
             ],
             "tipo_evento": [
-                "Congreso", "Conferencia", "Simposio", "Asamblea", "Seminario", "Coloquio", "Foro", "Reunion"
+                "Congreso",
+                "Conferencia",
+                "Simposio",
+                "Asamblea",
+                "Seminario",
+                "Coloquio",
+                "Foro",
+                "Reunion"
             ]
         },
         "Eng": {
             "alcance": [
-                "World", "Panamerican", "International", "Latin American", "South American"
+                "World",
+                "Panamerican",
+                "International",
+                "Latin American",
+                "South American"
             ],
             "tipo_evento": [
-                "Congress", "Congress", "Conference", "Symposium", "Assembly"
+                "Congress",
+                "Congress",
+                "Conference",
+                "Symposium",
+                "Assembly"
             ]
         }
     },

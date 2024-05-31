@@ -813,7 +813,7 @@ def main():
         iniciar_busqueda = tab2_col1.button("Iniciar Busqueda Automatica")
         if iniciar_busqueda:
             static_0.write(f"⏳ Buscando Informacion de eventos!!") 
-            df_events = buscar_eventos_v4(contraseñas, pages=config['paginas'], list_key_w= criterios, config= config)
+            df_events = buscar_eventos_v5(contraseñas, pages=config['paginas'], list_key_w= criterios, config= config)
             static_0.write(f"✔️ Hemos finalizado la busqueda de eventos ")   
             with st.expander("Ver Resultados Encontrados:"):
                 with st.container():
