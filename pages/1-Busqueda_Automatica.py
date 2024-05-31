@@ -360,7 +360,9 @@ def buscar_eventos_v4(contraseñas = None, pages=2, list_key_w= None, config = {
                 url = google_query_result[item]['link']
                 print("###############################################################")
                 print(url)
-                
+                if url.endswith('.pdf'):
+                    print("URL es un PDF")
+                    continue
                 bar.progress(i+step)
                 i = i+step
                 static_1.markdown('**Criterio:** {}'.format(key_W['exactTerms']))
@@ -464,7 +466,9 @@ def buscar_eventos_v5(contraseñas = None, pages=2, list_key_w= None, config = {
                 url = google_query_result[item]['link']
                 print("###############################################################")
                 print(url)
-                
+                if url.endswith('.pdf'):
+                    print("URL es un PDF")
+                    continue
                 bar.progress(i+step)
                 i = i+step
                 static_1.markdown('**Criterio:** {}'.format(key_W['exactTerms']))
@@ -809,7 +813,7 @@ def main():
         iniciar_busqueda = tab2_col1.button("Iniciar Busqueda Automatica")
         if iniciar_busqueda:
             static_0.write(f"⏳ Buscando Informacion de eventos!!") 
-            df_events = buscar_eventos_v4(contraseñas, pages=config['paginas'], list_key_w= criterios, config= config)
+            df_events = buscar_eventos_v5(contraseñas, pages=config['paginas'], list_key_w= criterios, config= config)
             static_0.write(f"✔️ Hemos finalizado la busqueda de eventos ")   
             with st.expander("Ver Resultados Encontrados:"):
                 with st.container():

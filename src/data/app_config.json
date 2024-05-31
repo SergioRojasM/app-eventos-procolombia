@@ -1,6 +1,6 @@
 {
     "modelo": "GROQ-MIXTRAL",
-    "paginas": 1,
+    "paginas": 2,
     "base_datos": "MongoDB",
     "periodo": "Sin restriccion",
     "orden": "Sin orden",
@@ -11,7 +11,8 @@
     "patrones_busqueda": {
         "Esp": {
             "alcance": [
-                "Internacional"
+                "Internacional",
+                "Iberoamericano"
             ],
             "tipo_evento": [
                 "Congreso"
@@ -35,6 +36,7 @@
         ]
     },
     "paginas_busqueda": [
-        "https://www.unbosque.edu.co/"
+        "https://www.unbosque.edu.co/",
+        "https://www.javeriana.edu.co"
     ]
 }
