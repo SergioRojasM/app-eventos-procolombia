@@ -37,75 +37,7 @@ from pages.lib.config import FN_KEYW_JSON, ACCESS_PATH, PATH_DATA
 from pages.lib.funciones_db import mdb_get_k_nearest_results
 from enum import Enum
 
-class event(BaseModel):
 
-    there_is_event: str = Field(description="Defines if any asociative event is mentioned. If so answer 'Yes', if not answer 'No'")
-    title: Optional[str] = Field(description="The name of the event, dont use Acronyms, dont use colon punctuation")
-    general_title: Optional[str] = Field(description="The name of the event, dont use Acronyms, don't use colon punctuation, don't specify the version of the event")
-    date: Optional[str] = None 
-    year: Optional[str] = Field(description="The year of the event, only one year. if not sure use None")
-    description: Optional[str] = Field(description="Resumen Corto del evento sin signos de puntuacion. ")
-    country: Optional[str] = Field(description="The location of the event, if not sure use None")
-    city: Optional[str] = Field(description="The city of the event, if not sure use None")
-    place: Optional[str] = Field(description="The name of the place where the event takes place, if not sure use None")
-    key_words: Optional[str] = Field(description="Only five key words of thats describe de event, separated by comma, if not sure use None")
-    asistants: Optional[str] = Field(description="Information about number of asistants to the event, if not sure use None")
-    
-class event_v2(BaseModel):
-    there_is_event: str = Field(..., description="Defines if any asociative event is mentioned. If so answer 'Yes', if not answer 'No'")
-    title: Optional[str] = Field(description="The name of the event, dont use Acronyms, dont use colon punctuation")
-    general_title: Optional[str] = Field(description="The name of the event, dont use Acronyms, don't use colon punctuation, don't specify the version of the event")
-    date: Optional[str] = None 
-    year: Optional[str] = Field(description="The year of the event, only one year. if not sure use None")
-    description: Optional[str] = Field(description="Summary of the event")
-    country: Optional[str] = Field(description="The location of the event, if not sure use None")
-    city: Optional[str] = Field(description="The city of the event, if not sure use None")
-    place: Optional[str] = Field(description="The name of the place where the event takes place, if not sure use None")
-    key_words: Optional[str] = Field(description="Only five key words of thats describe de event, separated by comma, if not sure use None")
-    asistants: Optional[str] = Field(description="Information about number of asistants to the event, if not sure use None")
-    event_type: Optional[str] = Field(..., description="describes the event type, if no event use None ", 
-                                      enum= ['Medical Sciences','Science','Social Sciences','Management','Education','Law','Economics','Technology','Industry',
-                                            'Culture & Ideas','Arts','Commerce','Mathematics & Statistics','Safety & Security','Sports & Leisure','Ecology & Environment',
-                                            'Transport & Communication','Historical Sciences','Library & Information', 'Other', 'None'])
-
-class event_validation(BaseModel):
-    there_is_event: str = Field(..., description="Defines if any asociative event is mentioned in the context, valid events are congress, symposium, conference, assembly, meeting, summit or seminary", enum = ['True', 'False'])
-        
-class event_type(BaseModel):
-    event_type: Optional[str] = Field(None, description="describes the event type ", 
-                                      enum= ['Medical Sciences','Science','Social Sciences','Management','Education','Law','Economics','Technology','Industry',
-                                            'Culture & Ideas','Arts','Commerce','Mathematics & Statistics','Safety & Security','Sports & Leisure','Ecology & Environment',
-                                            'Transport & Communication','Historical Sciences','Library & Information', 'Other'])
-
-class event_already_evaluation(BaseModel):
-    are_same_event: Optional[conint(ge=0, le=100)] = Field(None, description="describes the degree of similarity between the two events through a value between 0 and 100, where 100 represents that they are exactly the same ")
-  
-class event_type_enum(Enum):
-    medical_sciences = 'Medical Sciences',
-    science = 'Science',
-    social_sciences = 'Social Sciences'
-    
-class event_v3(BaseModel):
-    there_is_event: str = Field(..., description="Defines if any asociative event is mentioned in the context, valid events are congress, symposium, conference, assembly, meeting, summit or seminary.", enum = ['True', 'False'])
-    event_type: Optional[str] = Field(None, description="describes the event type including congress, symposium, conference, assembly, meeting, summit or seminary",
-                                      enum= ['Congress','Symposium','Conference','assembly','meeting','summit','seminary', 'Other'])
-    title: Optional[str] = Field(None, description="The name of the event, dont use Acronyms, dont use colon punctuation")
-    general_title: Optional[str] = Field(None,description="The name of the event, dont use Acronyms, don't use colon punctuation, don't specify the version of the event")
-    date: Optional[str] = None 
-    year: Optional[str] = Field(None,description="The year of the event, only one year. if not sure use None")
-    description: Optional[str] = Field(None,description="Summary of the event with details of the event")
-    country: Optional[str] = Field(None,description="The location of the event, if not sure use None")
-    city: Optional[str] = Field(None,description="The city of the event, if not sure use None")
-    place: Optional[str] = Field(None,description="The name of the place where the event takes place, if not sure use None")
-    key_words: Optional[str] = Field(None,description="Only five key words of thats describe de event, separated by comma, if not sure use None")
-    asistants: Optional[str] = Field(None,description="Information about number of asistants to the event, if not sure use None")
-    event_category: Optional[str] = Field(None, description="describes the category of the event", 
-                                      enum= ['Medical Sciences','Science','Social Sciences','Management','Education','Law','Economics','Technology','Industry',
-                                            'Culture & Ideas','Arts','Commerce','Mathematics & Statistics','Safety & Security','Sports & Leisure','Ecology & Environment',
-                                            'Transport & Communication','Historical Sciences','Library & Information', 'Other'])
-    
-class envent_list(BaseModel):
-    events: List[event_v3] = Field(..., description="The Event details")  
 
 # FUNCIONES PARA MANEJO DE CONFIGURACION
 
@@ -138,7 +70,6 @@ def actualizar_configuracion(configuracion):
             json.dump(configuracion, archivo, indent=4)
 
 def cargar_contraseñas(nombre_archivo):
-
     return st.secrets
 
 def obtener_criterios_busqueda(config):
@@ -362,10 +293,24 @@ def query_google_search(page=1, search_engine_keys=None, add_params = {}):
 
 ### FUNCIONES PARA USO DE GEMINI
 
+def obtener_tamano_url(url):
+    try:
+        # Hacer una solicitud GET a la URL
+        response = requests.get(url)
+        # Verificar si la solicitud fue exitosa
+        response.raise_for_status()
+        # Obtener el tamaño del contenido
+        tamano_contenido = len(response.content)
+        print(f"El tamaño del contenido en {url} es {tamano_contenido} bytes.")
+    except requests.exceptions.RequestException as e:
+        print(f"Error al acceder a la URL: {e}")
+
 def web_scrapper(url):
     """
 
     """
+    print(obtener_tamano_url(url))
+    
     text = None
     try:
         lang_request = TextRequestsWrapper()
@@ -435,262 +380,6 @@ def limpiar_dict_event(diccionario):
     except:
         diccionario['year_parsed'] = None
     return diccionario
-
-
-def extraer_informacion_general_gemini(url, API_KEY_GEMINI):
-    
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-pro", 
-        safety_settings={
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        })
-    model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Your Task is to extract any event showed in following "Context", in the answer the usage of colon punctuation marks or two points punctuation marks is prohibited, use comma instead. 
-    "context":{context_str}
-    \n{format_instructions}\n
-    """
-    parser = YamlOutputParser(pydantic_object=event)
-    # parser = JsonOutputParser(pydantic_object=event)
-
-    # Realizar el query a Gemini
-    llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-    llm_prompt = PromptTemplate(
-        template=llm_prompt_template,
-        input_variables=["context_str"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-    
-
-    context = web_scrapper(url)
-    if  context == None:
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        context = context.replace(":", ",").replace(";", ",")
-    elif context.startswith('Not Acceptable!'):
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        context = context.replace(":", ",").replace(";", ",")
-
-        
-    if context != None:
-        tokens_size = int(model.count_tokens(str(llm_prompt) + context).total_tokens)
-        if tokens_size > 30000:
-            return None
-        else:
-            stuff_chain = llm_prompt | llm | parser
-            llm_result = stuff_chain.invoke({"context_str": context} )
-
-            return llm_result
-
-def extraer_info_evento_gemini(event_context, API_KEY_GEMINI):
-    os.environ["GOOGLE_API_KEY"] = API_KEY_GEMINI
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-pro", 
-        safety_settings={
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        })
-    model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Your Task is to extract  information of maximum five events, only are allowed events like congress, symposium, conference, assembly, meeting, summit or seminary in the following "Context", the answer must be in english and in the answer the usage of colon ":" and ";" punctuation marks or two points punctuation marks is prohibited. 
-    "context":{context_str}
-    \n{format_instructions}\n
-    """
-    parser = YamlOutputParser(pydantic_object=envent_list)
-    # parser = JsonOutputParser(pydantic_object=event)
-
-    # Realizar el query a Gemini
-    llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-    llm_prompt = PromptTemplate(
-        template=llm_prompt_template,
-        input_variables=["context_str"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-    
-    stuff_chain = llm_prompt | llm | parser
-    llm_result = stuff_chain.invoke({"context_str": event_context} )
-    return llm_result
-
-def extraer_informacion_general_gemini_v3(url, API_KEY_GEMINI):
-    os.environ["GOOGLE_API_KEY"] = API_KEY_GEMINI
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-pro", 
-        safety_settings={
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        })
-    model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Your task to validate if there is any asociative event like congres, symposium, conference, assembly, meeting, summit, seminary in the following "Context". 
-    "context":{context_str}
-    \n{format_instructions}\n
-    """
-    parser = YamlOutputParser(pydantic_object=event_validation)
-    # parser = JsonOutputParser(pydantic_object=event)
-
-    # Realizar el query a Gemini
-    llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-    llm_prompt = PromptTemplate(
-        template=llm_prompt_template,
-        input_variables=["context_str"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-    
-
-    context = web_scrapper(url)
-    if  context == None:
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        context = context.replace(":", ",").replace(";", ",")
-    elif context.startswith('Not Acceptable!'):
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        context = context.replace(":", ",").replace(";", ",")
-    context = context.replace(":", ",").replace(";", ",")
-    
-    llm_event_val_result = None
-    llm_info_result = None
-    context_words = 0    
-    if context != None:
-        context_words = len(context.split())
-        tokens_size = int(model.count_tokens(str(llm_prompt) + context).total_tokens)
-        if tokens_size > 30000:
-            print(f"Error General: Limite de Tamaño de Token excedido {tokens_size}")
-        else:
-
-            stuff_chain = llm_prompt | llm | parser
-            llm_event_val_result = stuff_chain.invoke({"context_str": context} )
-            if llm_event_val_result.there_is_event == "True" or llm_event_val_result == True:
-                llm_info_result = extraer_info_evento_gemini(context, API_KEY_GEMINI)
-
-                
-    return llm_event_val_result, llm_info_result, tokens_size, context_words
-
-def extraer_tipo_evento_gemini(event_context):
-
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-pro", 
-        safety_settings={
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        })
-    model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Your Task is to classificate the event in one category, if not sure use "other". 
-    "context":{context_str}
-    \n{format_instructions}\n
-    """
-    parser = YamlOutputParser(pydantic_object=event_type)
-    # parser = JsonOutputParser(pydantic_object=event)
-
-    # Realizar el query a Gemini
-    llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-    llm_prompt = PromptTemplate(
-        template=llm_prompt_template,
-        input_variables=["context_str"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-
-    if event_context != None:
-        tokens_size = int(model.count_tokens(str(llm_prompt) + event_context).total_tokens)
-        print(f"Tamaño Token : {tokens_size}")
-        if tokens_size > 30000:
-            return None
-        else:
-            stuff_chain = llm_prompt | llm | parser
-            llm_result = stuff_chain.invoke({"context_str": event_context} )
-
-            return llm_result
-
-def extraer_informacion_general_gemini_v2(url, API_KEY_GEMINI):
-    print(url)
-    os.environ["GOOGLE_API_KEY"] = API_KEY_GEMINI
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-pro", 
-        safety_settings={
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        })
-    model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Your Task is to extract information about any asociative events, like congres, symposium, conference, assembly, meeting, summit, seminary in the following "Context", the answer must be in english and in the answer the usage of colon punctuation marks or two points punctuation marks is prohibited. 
-    "context":{context_str}
-    \n{format_instructions}\n
-    """
-    parser = YamlOutputParser(pydantic_object=envent_list)
-    # parser = JsonOutputParser(pydantic_object=event)
-
-    # Realizar el query a Gemini
-    llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-    llm_prompt = PromptTemplate(
-        template=llm_prompt_template,
-        input_variables=["context_str"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-    
-
-    context = web_scrapper(url)
-    if  context == None:
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        context = context.replace(":", ",").replace(";", ",")
-    elif context.startswith('Not Acceptable!'):
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        context = context.replace(":", ",").replace(";", ",")
-
-        
-    if context != None:
-        tokens_size = int(model.count_tokens(str(llm_prompt) + context).total_tokens)
-        if tokens_size > 30000:
-            return None
-        else:
-            try:
-                #stuff_chain = llm_prompt | llm | parser
-                stuff_chain = llm_prompt | llm
-                llm_result_list = stuff_chain.invoke({"context_str": context} )
-                llm_result_list_parsed = parser.parse(llm_result_list.content)
-                #for llm_re
-                #if llm_result.there_is_event == 'True' or llm_result.there_is_event == True:
-                #    llm_tipo_evento = extraer_tipo_evento_gemini(context)
-                #else:
-                #    llm_tipo_evento = None
-                return llm_result_list_parsed
-            except OutputParserException as e:
-                print(f"Error Parsing")
-                #print(llm_result_list.content.replace(":", ",").replace(";", ","))
-                #new_parser = OutputFixingParser.from_llm(parser=parser, llm=llm)
-                #llm_result_list_parsed = new_parser.parse(llm_result_list.content.replace(":", ",").replace(";", ","))
-                llm_result_list_parsed = output_parser_fix(str(llm_result_list.content))
-                return llm_result_list_parsed
-            except Exception as e:
-                print(f"Error General: {e}")
-                     
-                return None
 
 def filtrar_df(df):
     modify = st.checkbox("Crear Filtros")
@@ -944,6 +633,11 @@ def get_embedding_gemini(text, API_KEY_GEMINI ):
     return vector
 
 def comparar_eventos_gemini(event1, event2, API_KEY_GEMINI):
+    
+    
+    class event_already_evaluation(BaseModel):
+        are_same_event: Optional[conint(ge=0, le=100)] = Field(None, description="describes the degree of similarity between the two events through a value between 0 and 100, where 100 represents that they are exactly the same ")
+
     llm = ChatGoogleGenerativeAI(
         model="gemini-pro", 
         safety_settings={
@@ -953,7 +647,7 @@ def comparar_eventos_gemini(event1, event2, API_KEY_GEMINI):
             HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
         })
     model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Your Task is ti evaluate if the two events given are the same event, your answer must be a value between 0 and 100, where 100 is the higest value and means that event1 and event2 are the same. 
+    llm_prompt_template = """Your Task is to evaluate if the two events given are the same event, your answer must be a value between 0 and 100, where 100 is the higest value and means that event1 and event2 are the same. 
     "event1":{event1}
     "event2":{event2}
     \n{format_instructions}\n

@@ -27,7 +27,7 @@ from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 ###################################################################
-
+import time
 
 from pages.lib.config import FN_KEYW_JSON, ACCESS_PATH, PATH_DATA
 from pages.lib.funciones import web_scrapper
@@ -142,7 +142,7 @@ def consulta_llm(prompt, llm_model, temp, parser, schema):
             status = "Ok"
         except Exception as e:
             status = e
-
+    time.sleep(10)
     return status, result, tamano_token, tamano_palabras
 
 def crear_prompt(tipo, contexto ,  formato_salida):
@@ -230,64 +230,19 @@ def extraer_informacion_url(url, model):
     ver_evento = None
     datos_evento = None
     tamano_contexto = 0
-    tokens_size = 0    
-    if context != None:
-        prompt, parser, schema = crear_prompt('verificacion_evento', context, 'json' )
-        ver_evento = consulta_llm(prompt, model, 0, parser, schema)
-        print(ver_evento[1])
-        ver_evento = ver_evento[1]
-        print ("Obteniendo informacion del evento....")
-        if ver_evento.there_is_event == "True" or ver_evento.there_is_event == True:
-            prompt, parser, schema = crear_prompt('extraccion_data', context, 'json' )
-            status, datos_evento, tokens_size, tamano_contexto  = consulta_llm(prompt, model, 0,parser, schema)
-            print(datos_evento)
+    tokens_size = 0  
+    print(f"tamaño Palabras: {len(context.split())}" )
+    if len(context.split()) < 10000:
+      
+        if context != None:
+            prompt, parser, schema = crear_prompt('verificacion_evento', context, 'json' )
+            ver_evento = consulta_llm(prompt, model, 0, parser, schema)
+            print(ver_evento[1])
+            ver_evento = ver_evento[1]
+            print ("Obteniendo informacion del evento....")
+            if ver_evento.there_is_event == "True" or ver_evento.there_is_event == True:
+                prompt, parser, schema = crear_prompt('extraccion_data', context, 'json' )
+                status, datos_evento, tokens_size, tamano_contexto  = consulta_llm(prompt, model, 0,parser, schema)
+                print(datos_evento)
     return ver_evento, datos_evento, tokens_size, tamano_contexto
     
-    
-    
-    
-# import re
-
-# print ("Scrapping pagina WEB")
-# url = "https://indico.cern.ch/event/674840/"
-# url = "https://www.javeriana.edu.co/ins-bioetica/congreso-bioetica-felaibe-2023"
-
-# result = extraer_informacion_url(url, "Groq_llama3")
-# print(result)
-# context_eng = web_scrapper(url)
-# context_eng= re.sub(r'(\n)\n+', r'\1\1', context_eng)
-# context_eng =  context_eng.replace("\t", " ")
-# # print(context_eng)
-# print ("Creando Prompt....")
-# prompt, parser, schema = crear_prompt('extraccion_data', context_eng, "json",)
-# # print(prompt)
-# # print("Consultando tamaño prompt...")
-# # print(obtener_tamano_tokens(context_eng, contraseñas))
-
-# print ("Consultando LLM....")
-# # result = extraer_informacion_url(url, "Groq_mixtral8", contraseñas)
-# # prompt = prompt + prompt
-
-# llm_result = consulta_llm(prompt, "Gemini", 0, parser, schema)
-# print("Gemini:", llm_result)
-# llm_result = consulta_llm(prompt, "Groq_mixtral8", 0, parser, schema)
-# print("Groq_mixtral8:", llm_result)
-# llm_result = consulta_llm(prompt, "Groq_llama3", 0, parser, schema)
-# print("Groq_llama3:", llm_result)
-
-# print("Gemini:", parser.parse(llm_result.content))
-# print("\n")
-
-# llm_result = consulta_llm(prompt, "Gemini", contraseñas, temp=0)
-
-    
-# print(result)
-# print("Groq_llama3:", parser.parse(llm_result.content))
-# print("\n")
-# llm_result = consulta_llm(prompt, "Groq_mixtral8", contraseñas, temp=0)
-# print("Groq_mixtral8:", parser.parse(llm_result.content))
-# print("\n")
-# print(llm_result)
-
-# prompt = crear_prompt('verificacion_evento', 'contexto de prueba')
-# print(prompt)

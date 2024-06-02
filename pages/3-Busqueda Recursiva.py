@@ -3,9 +3,11 @@ import streamlit as st
 import datetime as dt
 import os, toml, requests
 import pandas as pd
-from pages.lib.funciones import cargar_eventos_procesados_archivo, filtrar_df, cargar_configuracion, cargar_contraseñas, actualizar_configuracion, buscar_urls_pagina
-from pages.lib.funciones import extraer_informacion_general_gemini_v3, limpiar_dict_event, get_embedding_gemini, check_event_embedding_gemini
+from pages.lib.funciones import cargar_configuracion, cargar_contraseñas, actualizar_configuracion, buscar_urls_pagina
+from pages.lib.funciones import limpiar_dict_event, get_embedding_gemini, check_event_embedding_gemini
 from pages.lib.funciones_db import check_title, insert_event_db, insert_google_url_info, check_url, insert_errors_db
+from pages.lib.funciones_llm import extraer_informacion_url
+import time
 import traceback
 
 from menu import menu
@@ -49,7 +51,6 @@ def buscar_eventos_recursivo(contraseñas, lista_paginas, config):
         i = 0
         for url in lista_urls:
             bar.progress(i+step)
-            st.write(step, i)
             i = i+step
             static_1.markdown('**Pagina:** {}'.format(pagina))
             static_2.markdown('**URL**: {}'.format(url))
@@ -58,7 +59,7 @@ def buscar_eventos_recursivo(contraseñas, lista_paginas, config):
             print(url)
             stats['urls'] += 1
             try:
-                event_val_result, event_info_list,tokens_size, context_words  = extraer_informacion_general_gemini_v3(url, contraseñas["api_gemini"]['KEY'])
+                event_val_result, event_info_list,tokens_size, context_words  = extraer_informacion_url(url, config['modelo'])
                 if (event_val_result.there_is_event == True or event_val_result.there_is_event == 'True') and  len(event_info_list.events) > 0 :
                     stats['urls_eventos'] += 1
                     if event_info_list != None:

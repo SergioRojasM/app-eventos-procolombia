@@ -22,8 +22,8 @@ import google.generativeai as genai
 import traceback
 from menu import menu
 
-from pages.lib.funciones import cargar_eventos_procesados_archivo, filtrar_df, cargar_configuracion, cargar_contraseñas, actualizar_configuracion, buscar_urls_pagina
-from pages.lib.funciones import extraer_informacion_general_gemini_v3, limpiar_dict_event, get_embedding_gemini, check_event_embedding_gemini, query_google_search
+from pages.lib.funciones import cargar_configuracion, cargar_contraseñas  
+from pages.lib.funciones import limpiar_dict_event, get_embedding_gemini, check_event_embedding_gemini, query_google_search
 from pages.lib.funciones_db import check_title, insert_event_db, insert_google_url_info, check_url, insert_errors_db
 from pages.lib.funciones_llm import extraer_informacion_url
 
