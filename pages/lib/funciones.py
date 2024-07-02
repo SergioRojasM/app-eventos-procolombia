@@ -295,11 +295,8 @@ def query_google_search(page=1, search_engine_keys=None, add_params = {}):
 
 def obtener_tamano_url(url):
     try:
-        # Hacer una solicitud GET a la URL
         response = requests.get(url)
-        # Verificar si la solicitud fue exitosa
         response.raise_for_status()
-        # Obtener el tamaño del contenido
         tamano_contenido = len(response.content)
         print(f"El tamaño del contenido en {url} es {tamano_contenido} bytes.")
     except requests.exceptions.RequestException as e:
@@ -309,46 +306,44 @@ def web_scrapper(url):
     """
 
     """
-    print(obtener_tamano_url(url))
-    
     text = None
     try:
+        print('Scraping: langChain')
         lang_request = TextRequestsWrapper()
         lang_request.get(url)
         result = lang_request.get(url)
-
         bs_result = BeautifulSoup(result, features="html.parser")
-        # Calculating result
         text = bs_result.get_text()
-        # text = text.replace("\n", " ")
-        # text = text.replace("\t", " ")
-        print('LangChain')
     except  Exception as e:
         print(f'Error LangChain: {e}')
         text = None
     
     if text == None:
         try:
-            # Sending HTTP GET request to the URL
+            print('Scraping: Requests')
             response = requests.get(url, verify=False)
-            response.raise_for_status()  # Raise an error for bad status codes
-
-            # Parsing the HTML content of the webpage
+            response.raise_for_status() 
             soup = BeautifulSoup(response.text, 'html.parser')
-
-            # Extracting text content from the parsed HTML
             text = soup.get_text(separator=' ', strip=True)
 
         except  Exception as e:
             print(f'Error request: {e}')
             text = None
-    
-    if text == None:
-        print('return:', text)
-        return None
+    if text == None or text.startswith('Not Acceptable!'):
+        try:
+            print("Scraping: WebBaseLoader")
+            loader = WebBaseLoader(url)
+            docs = loader.load()
+            doc_prompt = PromptTemplate.from_template("{page_content}")
+            text = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
+            text = text.replace(":", ",").replace(";", ",")
+        except Exception as e:
+            print(f'Error WebBaseLoader: {e}')
+            text = None
     else:
         text = text.replace(":", ",").replace(";", ",")
-        return text
+    
+    return text
         
 def limpiar_dict_event(diccionario):
     def quitar_tildes(texto):

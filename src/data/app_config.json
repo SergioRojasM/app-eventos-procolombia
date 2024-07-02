@@ -1,9 +1,9 @@
 {
     "modelo": "GEMINI",
-    "paginas": 2,
+    "paginas": 1,
     "base_datos": "MongoDB",
-    "periodo": "Sin restriccion",
-    "orden": "Sin orden",
+    "periodo": "Ultima semana",
+    "orden": "Mas Recientes",
     "criterios": [
         "World Congress-Colombia",
         "Eventos-Colombia-Bogota"
@@ -11,37 +11,18 @@
     "patrones_busqueda": {
         "Esp": {
             "alcance": [
-                "Internacional",
-                "Iberoamericano",
-                "Latinoamericano",
-                "Panamericano",
                 "Mundial"
             ],
             "tipo_evento": [
-                "Congreso",
-                "Conferencia",
-                "Simposio",
-                "Asamblea",
-                "Seminario",
-                "Coloquio",
-                "Foro",
-                "Reunion"
+                "Foro"
             ]
         },
         "Eng": {
             "alcance": [
-                "World",
-                "Panamerican",
-                "International",
-                "Latin American",
-                "South American"
+                "World"
             ],
             "tipo_evento": [
-                "Congress",
-                "Congress",
-                "Conference",
-                "Symposium",
-                "Assembly"
+                "Conference"
             ]
         }
     },

@@ -3,8 +3,10 @@ from pymongo.server_api import ServerApi
 import snowflake.connector
 import pandas as pd
 import numpy as np
+import datetime as dt
 from datetime import datetime
 
+#### FUNCIONES MONGODB
 
 def mdb_insert_doc(documento, nombre_coleccion, mdb_config):
     uri = f"mongodb+srv://{mdb_config['user']}:{mdb_config['password']}@{mdb_config['cluster']}.hscob2f.mongodb.net/?retryWrites=true&w=majority&appName={mdb_config['cluster']}"
@@ -50,7 +52,32 @@ def mdb_update_doc(doc_id, df, nombre_coleccion, mdb_config):
             return (True)
         except Exception as e:
             return('Error Cargando la informacion. Error: {}'.format(e))
-        
+
+def mdb_update_stats(doc_id, doc, nombre_coleccion, mdb_config):
+    uri = f"mongodb+srv://{mdb_config['user']}:{mdb_config['password']}@{mdb_config['cluster']}.hscob2f.mongodb.net/?retryWrites=true&w=majority&appName={mdb_config['cluster']}"
+    conn_status = False
+    try:
+        client = MongoClient(uri, server_api=ServerApi('1'))
+        db = client[mdb_config['database']]
+        coleccion = db[nombre_coleccion]
+        client.admin.command('ping')
+        conn_status = True
+    except:
+        print("Error Conectando a MongoDB")
+    
+    if conn_status:
+        try:
+
+            actualizacion = {'$inc': doc} 
+
+            # Actualizar el documento
+            resultado = coleccion.update_one({ "_id": doc_id }, actualizacion)
+            
+            return (True)
+        except Exception as e:
+            return('Error Cargando la informacion. Error: {}'.format(e))
+
+
 def mdb_execute_query(consulta, nombre_coleccion, mdb_config):
     uri = f"mongodb+srv://{mdb_config['user']}:{mdb_config['password']}@{mdb_config['cluster']}.hscob2f.mongodb.net/?retryWrites=true&w=majority&appName={mdb_config['cluster']}"
     conn_status = False
@@ -124,6 +151,8 @@ def mdb_actualizar_event_type(event_type,id_evento, nombre_coleccion, mdb_config
         except Exception as e:
             print ( f"Error:{e}")
             return('Error Cargando event_type. Error: {}'.format(e))
+
+
 #### FUNCIONES SNOWFLAKE
 
 def sf_insert_rows(df, nombre_tabla, sf_config):
@@ -237,7 +266,6 @@ def check_title(title, config, db):
     if db == "MongoDB":
         return mdb_check_title(title, config['mongo_db'], destino)
 
-    
 def insert_event_db(doc, config, db):
     destino = 'fct_eventos_turismo'
     if db == "MongoDB":
@@ -298,4 +326,43 @@ def mdb_get_k_nearest_results(embedding, k, nombre_coleccion, mdb_config):
         return result
     else:
         return False    
+
+def insertar_estadisticas(df, config, db):
+    destino = 'estadisticas_app'
+    if db == "MongoDB":
+        return mdb_insert_doc(df, destino, config['mongo_db'])            
+    
+def actualizar_estadisticas(doc, config, db):
+    timestamp = dt.datetime.today()
+    date = timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
+    if db == "MongoDB":
+        destino = 'estadisticas_app'
+        df = mdb_execute_query({'_id':date}, 'estadisticas_app', config['mongo_db'])
+        if len(df) > 0:    
+            destino = 'estadisticas_app'
+            result =  mdb_update_stats(date, doc, destino, config['mongo_db'])
+            print("Estadisticas Actualizadas!!")
+        else:
+            
+
+            stats = {}
+            stats['_id'] = date
+            stats.update(doc)
+            result = mdb_insert_doc([stats], destino, config['mongo_db'])
+
+            print("Estadisticas Insertadas!!")
+    return result
+
+def leer_estadisticas(periodo,config, db):
+
+    timestamp = dt.datetime.today()
+    date = timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
+    if db == "MongoDB":
+        destino = 'estadisticas_app'
+        if periodo == "hoy":
+            df = mdb_execute_query({'_id':date}, 'estadisticas_app', config['mongo_db'])
+
+        else:
+            df = mdb_execute_query({}, 'estadisticas_app', config['mongo_db'])
         
+    return df

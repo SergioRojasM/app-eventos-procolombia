@@ -146,4 +146,15 @@ row2_col2.plotly_chart(fig, theme="streamlit", use_container_width=True)
 
 column_config={"Event URL": st.column_config.LinkColumn("Event URL")}
 st.dataframe(df_events_hist_filter, use_container_width=True, hide_index  = True, column_config= column_config)
+df_events_hist_filter.to_excel("Reporte Eventos.xlsx", index = False)
 
+with open(f'Reporte Eventos.xlsx', "rb") as archivo:
+    file_content = archivo.read()
+    
+    st.markdown("<h1>Reporte Eventos </h1>", unsafe_allow_html=True)
+
+    st.download_button(
+        label="Descargar",
+        data=file_content,
+        file_name=f'Reporte Eventos.xlsx'
+    )

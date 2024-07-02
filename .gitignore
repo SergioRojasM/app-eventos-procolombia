@@ -11,3 +11,7 @@ debug/
 
 funciones_db_bcp.py
 funciones_db_test.py
+
+Reporte Eventos.xlsx
+Template_urls_manual.xlsx
+src/data/app_config - bcp.json

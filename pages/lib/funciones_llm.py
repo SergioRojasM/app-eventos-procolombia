@@ -212,29 +212,30 @@ def crear_prompt(tipo, contexto ,  formato_salida):
 def extraer_informacion_url(url, model):
     print ("Scrapping pagina WEB")
     context = web_scrapper(url)
-    if  context == None:
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        context = context.replace(":", ",").replace(";", ",")
-    elif context.startswith('Not Acceptable!'):
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        context = context.replace(":", ",").replace(";", ",")
-    context = context.replace(":", ",").replace(";", ",")
+    # if  context == None:
+    #     loader = WebBaseLoader(url)
+    #     docs = loader.load()
+    #     doc_prompt = PromptTemplate.from_template("{page_content}")
+    #     context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
+    #     context = context.replace(":", ",").replace(";", ",")
+    # elif context.startswith('Not Acceptable!'):
+    #     loader = WebBaseLoader(url)
+    #     docs = loader.load()
+    #     doc_prompt = PromptTemplate.from_template("{page_content}")
+    #     context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
+    #     context = context.replace(":", ",").replace(";", ",")
+    # context = context.replace(":", ",").replace(";", ",")
     
     print ("Validando si hay eventos....")
     ver_evento = None
     datos_evento = None
     tamano_contexto = 0
     tokens_size = 0  
-    print(f"tamaño Palabras: {len(context.split())}" )
-    if len(context.split()) < 10000:
+    # print (f"Contexto: {context}")
       
-        if context != None:
+    if context != None:
+        print(f"tamaño Palabras: {len(context.split())}" )
+        if len(context.split()) < 10000:
             prompt, parser, schema = crear_prompt('verificacion_evento', context, 'json' )
             ver_evento = consulta_llm(prompt, model, 0, parser, schema)
             print(ver_evento[1])
@@ -244,5 +245,9 @@ def extraer_informacion_url(url, model):
                 prompt, parser, schema = crear_prompt('extraccion_data', context, 'json' )
                 status, datos_evento, tokens_size, tamano_contexto  = consulta_llm(prompt, model, 0,parser, schema)
                 print(datos_evento)
+        else:
+            print("Extraer_info_url: Contexto Muy Grande")
+    else:
+        print("Extraer_info_url: Contexto None")
     return ver_evento, datos_evento, tokens_size, tamano_contexto
     

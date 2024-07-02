@@ -5,7 +5,7 @@ import os, toml, requests
 import pandas as pd
 from pages.lib.funciones import cargar_configuracion, cargar_contraseñas, actualizar_configuracion, buscar_urls_pagina
 from pages.lib.funciones import limpiar_dict_event, get_embedding_gemini, check_event_embedding_gemini
-from pages.lib.funciones_db import check_title, insert_event_db, insert_google_url_info, check_url, insert_errors_db
+from pages.lib.funciones_db import check_title, insert_event_db, insert_google_url_info, check_url, insert_errors_db, actualizar_estadisticas
 from pages.lib.funciones_llm import extraer_informacion_url
 import time
 import traceback
@@ -37,7 +37,10 @@ static_2 = tab2_col2.empty()
 static_3 = tab2_col2.empty()
 
 def buscar_eventos_recursivo(contraseñas, lista_paginas, config):
-    stats = {'urls':0, 'urls_eventos':0, 'urls_eventos_nuevos':0, 'eventos' : 0}
+    
+    stats = {'ejecuciones_automaticas':0, 'ejecuciones_manueales':0, 'ejecuciones_recursivas':0, 'urls':0, 'urls_eventos':0, 'eventos_nuevos':0, 'eventos' : 0, 'consultas_gse':0}
+    stats['ejecuciones_manueales'] += 1
+    
     date =  dt.datetime.today().date().strftime("%Y-%m-%d")
 
     for pagina in lista_paginas:
@@ -75,6 +78,7 @@ def buscar_eventos_recursivo(contraseñas, lista_paginas, config):
                                     if(check_event_embedding_gemini(event, contraseñas)):
                                         print("Evento ya encontrado por busqueda semantica")
                                     else:
+                                        stats['eventos_nuevos'] += 1
                                         print(f"Evento no procesado segun Busqueda Semantica, Contexto {context_words}, tokens {tokens_size}") 
                                         event_text = f"{event.title}, {event.description},  {event.date}, {event.year}, {event.country}, {event.city}"   
                                         event = event.__dict__
@@ -121,6 +125,9 @@ def buscar_eventos_recursivo(contraseñas, lista_paginas, config):
                     print("Errores Insertados Correctamente")
                 else:
                     print("Error Insertando Evento. Error: {}".format(resultado))
+    
+    status = actualizar_estadisticas(stats,contraseñas, config['base_datos'])
+
     static_1.markdown('**URLs Procesadas:** {}'.format(stats['urls']))
     static_2.markdown('**URLs Con Eventos:** {}'.format(stats['urls_eventos']))
     static_2.markdown('**Eventos Nuevos encontrados:** {}'.format(stats['eventos']))  
