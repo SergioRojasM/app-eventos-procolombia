@@ -58,7 +58,6 @@ class eventAsist(BaseModel):
     title: str  = Field(description="The name of the event, dont use initials, dont use punctuation marks")
     participants: Optional[str]   = Field(description="The resume of the information in few words about event participation, if not information or you are not sure put None")
 
-
 def es_archivo_pdf(url):
     try:
         # Realizar una solicitud HEAD para obtener solo los encabezados de la respuesta
@@ -144,153 +143,6 @@ def extraer_informacion_eventos_rel_gemini(url, event, API_KEY_GEMINI):
         stuff_chain = llm_prompt | llm | parser
         llm_result = stuff_chain.invoke({"context_str": context, "event_str": event} )
         return llm_result
-
-def rel_events_parser(yaml_events, df_hist_rel_events, event_key):
-    df_rel_events = pd.DataFrame(columns=['event_key', 'rel_event_link', 'rel_event_key','rel_event_title', 'rel_event_year', 'rel_event_country'])
-
-    for event in yaml_events.events:
-        events_related_parsed = {}
-        rel_event_key = event.title + " | " + event.country + " | " + str(event.year)
-        print(check_similar(event_key, [rel_event_key]) , check_similar(rel_event_key, df_hist_rel_events['rel_event_key']))
-        if not check_similar(event_key, [rel_event_key]) and not check_similar(rel_event_key, df_hist_rel_events['rel_event_key']):
-            if int(event.year) > dt.datetime.today().year -20:
-                events_related_parsed['event_key'] = event_key
-                events_related_parsed['rel_event_key'] = event.title + " | " + event.country + " | " + str(event.year)
-                events_related_parsed['rel_event_title'] = event.title
-                events_related_parsed['rel_event_country'] = event.country
-                events_related_parsed['rel_event_year'] = event.year
-                df_events_related_parsed = pd.DataFrame(events_related_parsed, index=[0])
-                df_rel_events = pd.concat([df_rel_events, df_events_related_parsed])
-    return df_rel_events
-
-def buscar_eventos_relacionados(llm_result_event, contraseñas):
-
-    df_rel_events = pd.DataFrame(columns=['event_key',  'rel_event_key','rel_event_title', 'rel_event_year', 'rel_event_country','rel_event_link'])
-    if llm_result_event.there_is_event == "True":
-
-        for i in range(3):
-            print(i)
-            
-            if i == 0:
-                add_args = {
-                    'lr': 'lang_eng|lang_esp'
-                }
-            elif i == 1:
-                add_args = {
-                    'lr': 'lang_esp'
-                }
-            elif i == 2:
-                add_args = {
-                    'lr': 'lang_esp',
-                    'cr': 'countryCO'
-                }
-            if llm_result_event.title !="" and llm_result_event.general_title !=None:
-                link_or_name = llm_result_event.general_title
-                search_pattern = f"related: {link_or_name} "
-            else:
-                link_or_name = llm_result_event.title
-                search_pattern = f"related: {link_or_name} "
-            print("Criterio Busqueda:{}".format(search_pattern))
-            google_query_result = query_google_search(search_pattern, 1, contraseñas["api_google_search"],add_args)
-            for url in google_query_result:
-                if es_archivo_pdf(google_query_result[url]['link']):
-                    continue
-                else:
-                    print(google_query_result[url]['link'], search_pattern)
-                    ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.description + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
-                    ref_event_key = llm_result_event.title + " | " + llm_result_event.country + " | " + llm_result_event.year 
-                    try:   
-                        yaml_events_related = extraer_informacion_eventos_rel_gemini(google_query_result[url]['link'], ref_event_info , contraseñas["api_gemini"]['KEY'])
-                        df_events_related_link = rel_events_parser(yaml_events_related, df_rel_events, ref_event_key)
-                        df_events_related_link ['rel_event_link'] = google_query_result[url]['link']
-                        df_rel_events = pd.concat([df_rel_events, df_events_related_link])
-                        if len(df_rel_events) >= 5:
-                            return df_rel_events
-                    except Exception as e:
-                        print(e)
-                        continue
-    return df_rel_events
-    
-def extraer_informacion_asistentes_gemini(url, event, API_KEY_GEMINI):
-    
-    os.environ["GOOGLE_API_KEY"] = API_KEY_GEMINI
-    llm = ChatGoogleGenerativeAI(model="gemini-pro")
-    model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Tu tarea es extraer de "context" la informacion disponible del numero de asistentes al evento {event_str} en el idioma del contexto". 
-    "context":{context_str}
-    \n{format_instructions}\n
-    """
-    parser = YamlOutputParser(pydantic_object=eventAsist)
-
-    # To extract data from WebBaseLoader
-    doc_prompt = PromptTemplate.from_template("{page_content}")
-    
-    # Realizar el query a Gemini
-    llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-    llm_prompt = PromptTemplate(
-        template=llm_prompt_template,
-        input_variables=["context_str", "event_str"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-    context = web_scrapper(url)
-    if context.startswith('Not Acceptable!'):
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-    tokens_size = int(model.count_tokens(str(llm_prompt) + context).total_tokens)
-    if tokens_size > 30000:
-        return None
-    else:
-        stuff_chain = llm_prompt | llm | parser
-        llm_result = stuff_chain.invoke({"context_str": context, "event_str": event} )
-        return llm_result
-    
-def buscar_informacion_asistentes(llm_result_event, contraseñas):
-    asistants_list = []
-    for i in range(3):
-        print(i)
-        
-        if llm_result_event.place !=None and llm_result_event.place !="":
-            location = llm_result_event.place
-        elif llm_result_event.country !=None and llm_result_event.country !="":
-            location = llm_result_event.country
-        else:
-            location = ""
-        search_pattern = f"{llm_result_event.general_title} {location}"
-        if i == 0:
-            add_args = {
-                'lr': 'lang_eng|lang_esp'
-            }
-        elif i == 1:
-            add_args = {
-                'lr': 'lang_esp'
-            }
-        elif i == 2:
-            add_args = {
-                'lr': 'lang_esp',
-                'cr': 'countryCO'
-            }
-        google_query_result = query_google_search(search_pattern, 1, contraseñas["api_google_search"], add_args)
-  
-        for url in google_query_result:
-            if es_archivo_pdf(google_query_result[url]['link']):
-                continue
-            else:
-                print(google_query_result[url]['link'], search_pattern)
-                ref_event_info = "title:" + llm_result_event.title + "|" +"resume:" + llm_result_event.description + "|"+"country:" + llm_result_event.country  + "|"+"year:" + llm_result_event.year
-                try:   
-                    yaml_envent_asistants = extraer_informacion_asistentes_gemini(google_query_result[url]['link'], ref_event_info , contraseñas["api_gemini"]['KEY'])
-                    if yaml_envent_asistants.participants not in [None, 'None', '', ' '] and not check_similar(yaml_envent_asistants.participants, asistants_list):
-                        asistants_list.append(yaml_envent_asistants.participants)
-                        print(asistants_list)
-                        if len(asistants_list) >=3:
-                            return "|".join(asistants_list)  
-                except Exception as e:
-                    print(e)
-                    continue
-    return "|".join(asistants_list) 
 
 def buscar_evento_url(url, contraseñas, config):
     stats = {'ejecuciones_automaticas':0, 'ejecuciones_manueales':0, 'ejecuciones_recursivas':0, 'urls':0, 'urls_eventos':0, 'eventos_nuevos':0, 'eventos' : 0, 'consultas_gse':0}
@@ -570,90 +422,51 @@ def main():
             if iniciar_lista_urls:
                 ph_tab3_1 = tab3_col2.empty()
                 ph_tab3_2 = tab3_col2.empty()
-                for url in lista_url:
+                ph_tab3_3 = tab3_col2.empty()
+                ph_tab3_4 = tab3_col2.empty()
+                ph_tab3_2.text(f'Progreso 0 %')
+                bar = tab3_col2.progress(0)
+                total_ulrs = len(lista_url)
+                results_lists = []
+                stats = {'ejecuciones_automaticas':0, 'ejecuciones_manueales':0, 'ejecuciones_recursivas':0, 'urls':0, 'urls_eventos':0, 'eventos_nuevos':0, 'eventos' : 0, 'consultas_gse':0}
+
+                for i,url in enumerate(lista_url):
                     ph_tab3_1.write(f"⏳ Buscando Informacion de eventos en la URL {url}!!")
+                    stats['urls'] += 1
                     llm_result, flag_evento_db = buscar_evento_url(url, contraseñas,config )
                     if llm_result != None:
                         if llm_result['there_is_event'] == "True":
-                            tab3_col2.markdown(f"✔️ Hemos encontrado eventos en la pagina {url}")
+                            ph_tab3_3.markdown(f"✔️ Hemos encontrado eventos en la pagina {url}")
+                            stats['eventos'] += 1
+                            results_lists.append(llm_result)
                             if flag_evento_db:
-                                tab3_col2.markdown(f"Evento almacenado previamente en Base de datos")
-                            else:
-                                tab3_col2.markdown(f"Evento almacenado correctamente en Base de datos")
+                                ph_tab3_4.markdown(f"Evento almacenado previamente en Base de datos")
                                 
-                            c_1 = tab3_col2.container(border=True)
-                            with tab3_col2.expander(f"Ver detalles del Evento: **{llm_result['title']}, {llm_result['country']}, {llm_result['year']}**"):
-                                event_info = f"""**- Titulo del evento:** {llm_result['title']}  
-                                **- Pais del evento:** {llm_result['country']} 
-                                **- Año del evento:** {llm_result['year']} 
-                                **- Fecha del evento:** {llm_result['date']}  
-                                **- Detalles:** {llm_result['description']}
-                                """
-                                st.markdown(event_info)
+                            else:
+                                ph_tab3_4.markdown(f"Evento almacenado correctamente en Base de datos")
+                                stats['eventos_nuevos'] += 1
                     else:
-                        tab3_col2.markdown(f"✖️ No se encontraron eventos en la pagina {url}")
-                    tab3_col2.divider()
-        
-        
-    # df_rel_events = pd.DataFrame(columns=['event_key',  'rel_event_key','rel_event_title', 'rel_event_year', 'rel_event_country','rel_event_link'])
-
-    # st.divider()
-    # col1, col2 = st.columns([2, 5])
-    # col1.text_input("Ingrese la url", key="url")
-    # evento_rel = col1.checkbox('Buscar eventos relacionados', key="evento_rel")
-    # evento_asistente = col1.checkbox('Buscar asistentes al evento', key="evento_asistente")
-    # col1.divider()
-    # iniciar = col1.button("Iniciar Busqueda")
-    
-    # # Añadir un botón a la interfaz de usuario
-    # if iniciar:
-    #     placeholder_1 = col2.empty()
-    #     placeholder_1.write(f"⏳ Buscando Informacion de eventos en la pagina {st.session_state.url}!!")
-    #     llm_result = buscar_evento(st.session_state.url, contraseñas,config )
-    #     if llm_result != None:
-        
-    #         if llm_result.there_is_event == "True":
-    #             placeholder_1.write(f"✔️ Hemos encontrado eventos en la pagina {st.session_state.url}")
-
-    #             c_1 = col2.container(border=True)
-    #             with col2.expander(f"Ver detalles del Evento: **{llm_result.title}, {llm_result.country}, {llm_result.year}**"):
-    #                 event_info = f"""**- Titulo del evento:** {llm_result.title}  
-    #                 **- Pais del evento:** {llm_result.country} 
-    #                 **- Año del evento:** {llm_result.year} 
-    #                 **- Fecha del evento:** {llm_result.date}  
-    #                 **- Detalles:** {llm_result.description}
-    #                 """
-    #                 # st.markdown(event_info)
+                        ph_tab3_3.markdown(f"✖️ No se encontraron eventos en la pagina {url}")
+                        
+                    ph_tab3_2.text(f'Progreso {100*(i+1)/total_ulrs} % - Urls Procesadas: {i+1} - Urls Faltantes: {total_ulrs - (i+1)}')
+                    bar.progress((i+1)/total_ulrs)
                 
-    #             if evento_rel:
-    #                 placeholder_2 = col2.empty()
-    #                 placeholder_2.write(f"⏳ Buscando Informacion de eventos relacionados a {llm_result.title}!!")
-
-    #                 df_rel_events = buscar_eventos_relacionados(llm_result, contraseñas)
-    #                 if len(df_rel_events) > 0:
-    #                     placeholder_2.write(f"✔️ Hemos encontrado eventos relacionados a  {llm_result.title}")
-                        
-    #                     with col2.expander(f"Ver detalles de los eventos relacionados"):
-    #                         st.dataframe(df_rel_events, use_container_width=True, hide_index  = True)
-
-    #             if evento_asistente:
-    #                 placeholder_3 = col2.empty()
-    #                 placeholder_3.write(f"⏳ Buscando Informacion de asistentes al evento a {llm_result.title}!!")
-    #                 asistentes = buscar_informacion_asistentes(llm_result, contraseñas)
-    #                 if asistentes:
-    #                     placeholder_3.write(f"✔️ Hemos informacion de asistentes al evento a {llm_result.title}!!")
-                        
-    #                     with col2.expander(f"Ver Informacion de los asistentes"):
-    #                         st.write(asistentes)
-                            
-    #     else:
-    #         placeholder_1.write(f"⚠️ No hemos encontrado eventos en la pagina {st.session_state.url}")
-            
-
-
-            
-            
-            
+                event_info = f"""**- Total URLs Procesadas :** {stats['urls']} **- Total Eventos :** {stats['eventos']} **- Total eventos nuevos:** {stats['eventos_nuevos']} 
+                        """
+                tab3_col2.markdown(event_info)
+                
+                tab3_col2.divider()   
+                c_1 = tab3_col2.container(border=True)
+                
+                with tab3_col2.expander(f"Ver detalles de los eventos"):
+                    for llm_result in results_lists:
+                        event_info = f"""**- Titulo del evento:** {llm_result['title']}  
+                        **- Pais del evento:** {llm_result['country']} 
+                        **- Año del evento:** {llm_result['year']} 
+                        **- Fecha del evento:** {llm_result['date']}  
+                        **- Detalles:** {llm_result['description'][:20]} ...
+                        """
+                        st.markdown(event_info) 
             
 if __name__ == "__main__":
     main()
