@@ -134,7 +134,6 @@ def buscar_eventos(contraseñas = None, pages=2, list_key_w= None, config = {}):
                             print("URL No Procesado")
                             event_val_result, event_info_list,tokens_size, context_words  = extraer_informacion_url(url, config['modelo'])
                             if (event_val_result.there_is_event == True or event_val_result.there_is_event == 'True') and  len(event_info_list.events) > 0 :
-                                
                                 stats['urls_eventos'] += 1
                                 if event_info_list != None:
                                     for event in event_info_list.events:
@@ -209,27 +208,12 @@ def buscar_eventos(contraseñas = None, pages=2, list_key_w= None, config = {}):
 
     
     
-    return df_events_busqueda
-
-
-def json_to_df(json_dict):
-
-    try:
-        # Intenta cargar el JSON en un DataFrame
-
-        df = pd.DataFrame([json_dict])
-        return df
-    except Exception as e:
-        print("Error al convertir JSON a DataFrame:", e)
-        return None 
-    
+    return df_events_busqueda    
 
 def main():
     
-
     config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
     contraseñas = cargar_contraseñas(ACCESS_PATH)
-    # criterios = obtener_criterios_busqueda(config)
     
     with tab1:
         
@@ -460,8 +444,6 @@ def main():
                 st.markdown(f"  ***Busqueda******{i+1}:***")
                 st.markdown(f"***Criterio:***  {criterio['q']}, ***Idioma:***  {criterio['lr']}, ***Periodo:***  {periodo} ***Orden:***  {orden}")
                 
-        
-    
     with tab2:
         
         estadisticas_hoy = leer_estadisticas('hoy',contraseñas, config['base_datos'])
@@ -574,6 +556,7 @@ def main():
                 else:
                     orden = "Ninguno"
                 st.markdown(f"  ***Busqueda******{i+1}:***")
-                st.markdown(f"***Criterio:***  {criterio['q']}, ***Idioma:***  {criterio['lr']}, ***Periodo:***  {periodo} ***Orden:***  {orden}")  
+                st.markdown(f"***Criterio:***  {criterio['q']}, ***Idioma:***  {criterio['lr']}, ***Periodo:***  {periodo} ***Orden:***  {orden}") 
+                 
 if __name__ == "__main__":
     main()

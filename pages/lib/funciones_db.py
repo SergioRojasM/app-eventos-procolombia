@@ -77,7 +77,6 @@ def mdb_update_stats(doc_id, doc, nombre_coleccion, mdb_config):
         except Exception as e:
             return('Error Cargando la informacion. Error: {}'.format(e))
 
-
 def mdb_execute_query(consulta, nombre_coleccion, mdb_config):
     uri = f"mongodb+srv://{mdb_config['user']}:{mdb_config['password']}@{mdb_config['cluster']}.hscob2f.mongodb.net/?retryWrites=true&w=majority&appName={mdb_config['cluster']}"
     conn_status = False

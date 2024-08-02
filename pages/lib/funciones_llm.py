@@ -1,16 +1,7 @@
-# print ("Iniciando applicativo....")
-# import sys, os
-# sys.path.append('C:/wom/1_VIU/TFM/app-eventos-procolombia')
-# os.chdir('C:/wom/1_VIU/TFM/app-eventos-procolombia')
-# # print(os.getcwd())
-
-
-###################################################################
 import yaml, os
 from langchain_core.output_parsers import JsonOutputParser
 from langchain.output_parsers import PydanticOutputParser, YamlOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
-# from langchain.document_loaders import WebBaseLoader
 from langchain_community.document_loaders import WebBaseLoader
 from langchain.schema.prompt_template import format_document
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -212,26 +203,12 @@ def crear_prompt(tipo, contexto ,  formato_salida):
 def extraer_informacion_url(url, model):
     print ("Scrapping pagina WEB")
     context = web_scrapper(url)
-    # if  context == None:
-    #     loader = WebBaseLoader(url)
-    #     docs = loader.load()
-    #     doc_prompt = PromptTemplate.from_template("{page_content}")
-    #     context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-    #     context = context.replace(":", ",").replace(";", ",")
-    # elif context.startswith('Not Acceptable!'):
-    #     loader = WebBaseLoader(url)
-    #     docs = loader.load()
-    #     doc_prompt = PromptTemplate.from_template("{page_content}")
-    #     context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-    #     context = context.replace(":", ",").replace(";", ",")
-    # context = context.replace(":", ",").replace(";", ",")
     
     print ("Validando si hay eventos....")
     ver_evento = None
     datos_evento = None
     tamano_contexto = 0
     tokens_size = 0  
-    # print (f"Contexto: {context}")
       
     if context != None:
         print(f"tamaño Palabras: {len(context.split())}" )
