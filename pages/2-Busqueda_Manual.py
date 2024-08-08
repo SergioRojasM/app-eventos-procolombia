@@ -1,27 +1,17 @@
-
 import streamlit as st
-import os, toml, requests
+import os,  requests
 import requests
 import datetime as dt
 import pandas as pd
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from bs4 import BeautifulSoup
 from typing import List, Dict, Optional, Union
-from langchain.utilities import TextRequestsWrapper
-from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain.output_parsers import PydanticOutputParser, YamlOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
-# from langchain.document_loaders import WebBaseLoader
-from langchain_community.document_loaders import WebBaseLoader
-from langchain.schema.prompt_template import format_document
-from langchain_google_genai import ChatGoogleGenerativeAI
-import google.generativeai as genai
 import traceback
 from menu import menu
 
+# Librerias locales
 from pages.lib.funciones import cargar_configuracion, cargar_contraseñas  
 from pages.lib.funciones import limpiar_dict_event, get_embedding_gemini, check_event_embedding_gemini, query_google_search
 from pages.lib.funciones_db import check_title, insert_event_db, insert_google_url_info, check_url, insert_errors_db, actualizar_estadisticas
@@ -35,140 +25,58 @@ FN_KEYW = 'db_eventos_keyw.csv'
 FN_EVENTS = 'events_data.xlsx'
 FN_KEYW_JSON = 'app_config.json'
 ACCESS_PATH = PATH_CWD + "/.scrts/access.toml"
-#
 MODELS_DICT = {'Gemini':0, 'GROG-LLAMA2':1}
+
+#Configuracion General
 st.set_page_config(layout="wide")
 menu()
 st.image(PATH_IMG + "header_cocora.jpg")
 st.subheader("Busqueda Manual de informacion")
 
+# Definicion de Pestañas
 tab1, tab2, tab3= st.tabs(["Por URL", "Por Evento", "Lista de URLs"])
 
-
-    
-class Event(BaseModel):
-    title: str  = Field(description="The name of the event, dont use initials, dont use punctuation marks")
-    year: Optional[str]   = Field(description="The year of the event")
-    country: Optional[str] = Field(description="The location of the event")
-
-class json_resp_events(BaseModel):
-    events: List[Event] = Field(..., description="The Event details")
-
-class eventAsist(BaseModel):
-    title: str  = Field(description="The name of the event, dont use initials, dont use punctuation marks")
-    participants: Optional[str]   = Field(description="The resume of the information in few words about event participation, if not information or you are not sure put None")
-
-def es_archivo_pdf(url):
-    try:
-        # Realizar una solicitud HEAD para obtener solo los encabezados de la respuesta
-        response = requests.head(url)
-        
-        # Verificar si la respuesta tiene el tipo de contenido "application/pdf"
-        if 'application/pdf' in response.headers.get('Content-Type', ''):
-            return True
-        else:
-            return False
-    except requests.exceptions.RequestException as e:
-        print("Error al hacer la solicitud:", e)
-        return False
-
-def preprocess(sentence):
-    try:
-        nltk.data.find('tokenizers/punkt')
-        nltk.data.find('corpora/stopwords')
-    except LookupError:
-        nltk.download('punkt')
-        nltk.download('stopwords')
-    stop_words = list(set(stopwords.words('english'))) + list(set(stopwords.words('spanish')))
-    word_tokens = word_tokenize(sentence.lower())
-    return [word for word in word_tokens if word.isalnum() and word not in stop_words ]
-
-def jaccard_similarity(sentence1, sentence2):
-    words1 = set(preprocess(sentence1))
-    words2 = set(preprocess(sentence2))
-    intersection = len(words1.intersection(words2))
-    try:
-        if len(words1) == len(intersection):
-            return 1
-        else:
-            union = len(words1.union(words2))
-            return intersection / union if union != 0 else 0 
-    except:
-        union = len(words1.union(words2))
-        return intersection / union if union != 0 else 0 
-
-def check_similar (new_key, old_keys):
-    for old_key in old_keys:
-        similarity_score = jaccard_similarity(new_key, old_key)
-        if similarity_score >= 0.7:
-            return True
-        else:
-            continue
-    return False
-
-def extraer_informacion_eventos_rel_gemini(url, event, API_KEY_GEMINI):
-    
-    os.environ["GOOGLE_API_KEY"] = API_KEY_GEMINI
-    llm = ChatGoogleGenerativeAI(model="gemini-pro")
-    model = genai.GenerativeModel('gemini-pro')
-    llm_prompt_template = """Your Task is to extract any event showed in following "Context" that can be related to the "event information". 
-    "event information":{event_str}
-    "context":{context_str}
-    \n{format_instructions}\n
-    """
-    parser = YamlOutputParser(pydantic_object=json_resp_events)
-
-    # To extract data from WebBaseLoader
-    doc_prompt = PromptTemplate.from_template("{page_content}")
-    
-    # Realizar el query a Gemini
-    llm_prompt = PromptTemplate.from_template(llm_prompt_template)
-
-    llm_prompt = PromptTemplate(
-        template=llm_prompt_template,
-        input_variables=["context_str", "event_str"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-    context = web_scrapper(url)
-    if context.startswith('Not Acceptable!'):
-        loader = WebBaseLoader(url)
-        docs = loader.load()
-        doc_prompt = PromptTemplate.from_template("{page_content}")
-        context = "\n\n".join(format_document(doc, doc_prompt) for doc in docs)
-        
-    tokens_size = int(model.count_tokens(str(llm_prompt) + context).total_tokens)
-    if tokens_size > 30000:
-        return None
-    else:
-        stuff_chain = llm_prompt | llm | parser
-        llm_result = stuff_chain.invoke({"context_str": context, "event_str": event} )
-        return llm_result
-
 def buscar_evento_url(url, contraseñas, config):
+    """
+    Busca eventos en linea y extrae datos de los mismos, teniendo en cuenta la URL ingresada.
+
+    Esta función realiza una búsqueda de eventos en línea en la URL especificada. 
+    En la misma funcion se almacenan los datos en base de datos. 
+    Luego, retorna una bandera que especifica si se encontraron eventos, junto con un diccionario que incluye los datos extraidos.
+
+    Parámetros:
+    - url (str): URL que se va a procesar
+    - contraseñas (dict): Diccionario con listado  de contraseñas y tokens necesarios
+    - config (dict): Diccionario con configuraciones adicionales del aplicativo. Como la base de datos a utilizar y el modelo LLM
+
+    Retorna:
+    - event (dict): Diccionario con los datos del evento encontrado 
+    - flag_evento_db (bool): Bandera que indica si hay o no eventos en la URL 
+    """
     stats = {'ejecuciones_automaticas':0, 'ejecuciones_manueales':0, 'ejecuciones_recursivas':0, 'urls':0, 'urls_eventos':0, 'eventos_nuevos':0, 'eventos' : 0, 'consultas_gse':0}
     stats['ejecuciones_manueales'] += 1
     stats['urls'] += 1
     date =  dt.datetime.today().date().strftime("%Y-%m-%d")
     flag_evento_db = False
     try:
-        event_val_result, event_info_list,tokens_size, context_words  = extraer_informacion_url(url,config['modelo'])
+        event_val_result, event_info_list,tokens_size, context_words  = extraer_informacion_url(url,config['modelo']) # Procesar la URL en busca de eventos
         
-        if event_val_result != None:
-            if (event_val_result.there_is_event == True or event_val_result.there_is_event == 'True') and  len(event_info_list.events) > 0 :
+        if event_val_result != None: # Validar si se encontro algun evento
+            if (event_val_result.there_is_event == True or event_val_result.there_is_event == 'True') and  len(event_info_list.events) > 0 : # Validar si se encontro algun evento
                 if event_info_list != None:
-                    for event in event_info_list.events:
+                    for event in event_info_list.events: # Recorrer la lista de eventos encontrados
                         if event.there_is_event == "True" and event.title != None:
                             stats['urls_eventos'] += 1
                             stats['eventos'] += 1
                             print("Evento encontrado: {}".format(event.title))
-                            if(check_title(event.title, contraseñas, config['base_datos'])):
+                            if(check_title(event.title, contraseñas, config['base_datos'])): # Validar si el evento ya ha sido procesado anteriormente, basandose en el titulo
                                 print("Evento ya encontrado por titulo")
                                 event = event.__dict__
                                 flag_evento_db = True
                             else:
                                 print("Evento no procesado segun titulo")
                                 
-                                if(check_event_embedding_gemini(event, contraseñas)):
+                                if(check_event_embedding_gemini(event, contraseñas)): # Validar si el evento ya ha sido procesado anteriormente, basandose en la informacion contextual
                                     flag_evento_db = True
                                     event = event.__dict__
                                     print("Evento ya encontrado por busqueda semantica")
@@ -183,7 +91,7 @@ def buscar_evento_url(url, contraseñas, config):
                                     event['tokens_size'] = tokens_size
                                     event['context_words'] = context_words
                                     event = limpiar_dict_event(event)
-                                    resultado = insert_event_db([event], contraseñas, config['base_datos'])
+                                    resultado = insert_event_db([event], contraseñas, config['base_datos']) # Insertar informacion del evento en base de datos
                                     if resultado == True:
                                         print("Evento Insertados Correctamente")
                                     else:
@@ -196,7 +104,7 @@ def buscar_evento_url(url, contraseñas, config):
                 print (f"No Event: {event_val_result.there_is_event}")
                 return None, None
                 
-            if (check_url(url, contraseñas, config['base_datos'])):
+            if (check_url(url, contraseñas, config['base_datos'])): # Validar si la URL ya ha sido procesado anteriormente
                 print("URL ya guardado")
             else:    
                 url_info = {'google_title': '',
@@ -205,7 +113,7 @@ def buscar_evento_url(url, contraseñas, config):
                             'google_url':url}    
                 url_info['_id'] = url
                 url_info['criterio'] = 'recursiva'
-                insert_google_url_info(url_info, contraseñas, config['base_datos'])
+                insert_google_url_info(url_info, contraseñas, config['base_datos']) # Insertar URL en base de datos
             
             
             status = actualizar_estadisticas(stats,contraseñas, config['base_datos'])
@@ -234,7 +142,21 @@ def buscar_evento_url(url, contraseñas, config):
         return None, None
     
 def buscar_evento_nombre(evento_nombre, contraseñas, config):
-    
+    """
+    Busca eventos en linea con base en el titulo del evento y extrae datos de los encontrados.
+
+    Esta función realiza una búsqueda de eventos en línea con base en el titulo del evento. 
+    En la misma funcion se almacenan los datos en base de datos. 
+    Luego, retorna una lista con los eventos encontrados y sus datos.
+
+    Parámetros:
+    - evento_nombre (str): Titulo del evento a buscar informacion en linea
+    - contraseñas (dict): Diccionario con listado  de contraseñas y tokens necesarios
+    - config (dict): Diccionario con configuraciones adicionales del aplicativo. Como la base de datos a utilizar y el modelo LLM
+
+    Retorna:
+    - events_result (list): Lista de diccionarios con la informacion de cada evento enacontrado 
+    """
     stats = {'ejecuciones_automaticas':0, 'ejecuciones_manueales':0, 'ejecuciones_recursivas':0, 'urls':0, 'urls_eventos':0, 'eventos_nuevos':0, 'eventos' : 0, 'consultas_gse':0}
     stats['ejecuciones_manueales'] += 1
 
@@ -247,24 +169,24 @@ def buscar_evento_nombre(evento_nombre, contraseñas, config):
                     'q': evento_nombre,
                     'lr': 'lang_esp|lang_eng',
                     }
-    google_query_result = query_google_search( 1, contraseñas["api_google_search"], search_params)
+    google_query_result = query_google_search( 1, contraseñas["api_google_search"], search_params) # Se realiza una busqueda en Google Search del nombre del evento
     stats['consultas_gse'] += 1
-    for item in google_query_result.keys():
+    for item in google_query_result.keys(): # Se recorren las URLs obtenidas, relacionadas al titulo del evento
         stats['urls'] += 1
         url = google_query_result[item]['link']
         print('#################################')
         print(url)
         try:
-            event_val_result, event_info_list,tokens_size, context_words  = extraer_informacion_url(url,config['modelo'])
-            if (event_val_result.there_is_event == True or event_val_result.there_is_event == 'True') and  len(event_info_list.events) > 0 :
+            event_val_result, event_info_list,tokens_size, context_words  = extraer_informacion_url(url,config['modelo']) # Se extrae la informacion de eventos de cada URL
+            if (event_val_result.there_is_event == True or event_val_result.there_is_event == 'True') and  len(event_info_list.events) > 0 : # Se valida si se encontraron eventos
                 stats['urls_eventos'] += 1
                 if event_info_list != None:
-                    for event in event_info_list.events:
+                    for event in event_info_list.events: # Se recorre cada evento encontrado
                         stats['eventos'] += 1
                         if event.there_is_event == "True" and event.title != None:
                             print("Evento encontrado: {}".format(event.title))
                             urls.append(url)
-                            events_total.append(event)
+                            events_total.append(event) # Se almacenan temporalmente los eventos encontrados
                             if event.title == evento_nombre:
                                 event_found=True
                                 break
@@ -275,16 +197,16 @@ def buscar_evento_nombre(evento_nombre, contraseñas, config):
             traceback.print_exc()
             print(f"Error:{e}" )
 
-    for i, event in enumerate(events_total):
+    for i, event in enumerate(events_total): # Se recorren los eventos encontrados
         print('#################################')
         print(event.title, urls[i])
-        if(check_title(event.title, contraseñas, config['base_datos'])):
+        if(check_title(event.title, contraseñas, config['base_datos'])): # Se valida si el evento ya se habia procesado anteriormente, con base en el titulo
             event = event.__dict__
             print("Evento ya encontrado por titulo")
         else:
             print("Evento no procesado segun titulo")
             
-            if(check_event_embedding_gemini(event, contraseñas)):
+            if(check_event_embedding_gemini(event, contraseñas)): # Se valida si el evento ya se habia procesado anteriormente, con base en la informacion contextual
                 event = event.__dict__
                 print("Evento ya encontrado por busqueda semantica")
             else:
@@ -299,7 +221,7 @@ def buscar_evento_nombre(evento_nombre, contraseñas, config):
                 event['context_words'] = context_words
                 event = limpiar_dict_event(event)
                 
-                resultado = insert_event_db([event], contraseñas, config['base_datos'])
+                resultado = insert_event_db([event], contraseñas, config['base_datos']) # Se almacenan los datos del evento en base de datos
                 if resultado == True:
                     print("Evento Insertados Correctamente")
                 else:
@@ -307,7 +229,7 @@ def buscar_evento_nombre(evento_nombre, contraseñas, config):
                     
         events_result.append(event) 
         
-        if (check_url(urls[i], contraseñas, config['base_datos'])):
+        if (check_url(urls[i], contraseñas, config['base_datos'])): # Se valida si la URL ya habia sido procesada anteriormente
             print("URL ya guardado")
         else:
             print("URL Guardada")    
@@ -321,12 +243,11 @@ def buscar_evento_nombre(evento_nombre, contraseñas, config):
     status = actualizar_estadisticas(stats,contraseñas, config['base_datos'])
 
     return events_result
-            
-    
+             
 def main():
     contraseñas = cargar_contraseñas(ACCESS_PATH)
     config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
-    with tab1:
+    with tab1: # Pestaña para busqueda por URL
         col1, col2 = st.columns([2, 5])
         col1.text_input("Ingrese la url", key="url")
         col1.divider()
@@ -355,7 +276,7 @@ def main():
                         """
                         st.markdown(event_info)
         
-    with tab2:
+    with tab2: # Pestaña para busqueda por titulo de evento 
         col1, col2 = st.columns([2, 5])
         placeholder_1 = col2.empty()
         placeholder_2 = col2.empty()
@@ -377,7 +298,7 @@ def main():
                     """
                     st.markdown(event_info)
         
-    with tab3:    
+    with tab3: # Pestaña para busqueda por lista de URLs   
         flag_archivo = False
         df_muestra = pd.DataFrame([{'URL':""}])
         tab3_col1, tab3_col2 = st.columns([3,5])

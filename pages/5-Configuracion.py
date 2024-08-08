@@ -2,7 +2,6 @@ import streamlit as st
 import datetime as dt
 import os, toml, requests
 import pandas as pd
-from pages.lib.funciones import cargar_eventos_procesados_archivo, filtrar_df, cargar_contraseñas
 
 from menu import menu
 import plotly.express as px
@@ -23,14 +22,15 @@ DB_DICT = {'MongoDB':0, 'Snowflake':1}
 PERIODO_DICT = {"Sin restriccion" : 0, "Ultimo año":1, "Ultimo mes":2, "Ultima semana":3}
 ORDEN_DICT = {"Sin orden":0, "Mas Recientes":1, "Los dos metodos":2}
 
-#
-
-
+#Configuracion de pagina
 menu()
 st.image(PATH_IMG + "header_rio.jpg")
 
+# Cargar configuracion de archivo json
 config = cargar_configuracion( PATH_DATA + FN_KEYW_JSON)
 
+
+# Crear opciones de seleccion para modelo a usar
 st.header("Configuracion por defecto")
 col1_conf, col2_conf = st.columns([4,4])
 col1_conf.markdown("***Modelo LLM*** ")
@@ -42,6 +42,7 @@ config['modelo'] = col1_conf.radio(
                         horizontal = True
                     )
 
+# Crear opciones de seleccion para base de datos a usar
 col1_conf.markdown("***Base de datos*** ")
 config['base_datos'] = col1_conf.radio(
                 "Seleccionar Base de datos 👉",

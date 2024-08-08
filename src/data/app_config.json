@@ -2,8 +2,8 @@
     "modelo": "GEMINI",
     "paginas": 1,
     "base_datos": "MongoDB",
-    "periodo": "Ultima semana",
-    "orden": "Mas Recientes",
+    "periodo": "Ultimo a\u00f1o",
+    "orden": "Sin orden",
     "criterios": [
         "World Congress-Colombia",
         "Eventos-Colombia-Bogota"
@@ -14,7 +14,7 @@
                 "Mundial"
             ],
             "tipo_evento": [
-                "Foro"
+                "Congreso"
             ]
         },
         "Eng": {
@@ -22,7 +22,7 @@
                 "World"
             ],
             "tipo_evento": [
-                "Conference"
+                "Congress"
             ]
         }
     },
