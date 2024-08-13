@@ -82,3 +82,4 @@ A continuacion la descripcion de los directorios del proyecto:
 	├── readme.txt				# Documentacion GIT 
 	├── requirements.txt			# Librerias necesarias del proyecto 
 ```
+El archivo secrets.toml debe ser adicionado manualmente con las credenciales y las llaves de las APIs
