@@ -34,8 +34,22 @@ source .venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+## Uso
 
+Para ejecutar el aplicativo localmente ejecutar:
 
+### Activar el entorno virtual
+```bash
+# En Windows:
+.\.venv\Scripts\activate
+# En Linux:
+source .venv/bin/activate 
+```
+
+### Ejecutar el script de Streamlit
+```bash
+streamlit run .\app_eventos_procolombia.py
+```
 ## Componentes
 
 A continuacion la descripcion de los directorios del proyecto:
